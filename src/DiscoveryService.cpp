@@ -96,10 +96,10 @@ namespace SQMixMitm {
                 } else {
                     sendto(sockfd_, (const char *)name_.data(), name_.length()+1, 0, (const struct sockaddr *) &cliaddr, len);
                 }
-            }
-        });
+            } // while running
 
-
+            close(sockfd_);
+        }); // worker thread
 
         return EXIT_SUCCESS;
     }
@@ -111,8 +111,8 @@ namespace SQMixMitm {
         state_ = Stopping;
 
         thread_->join();
-
-        close(sockfd_);
+        delete thread_;
+        thread_ = nullptr;
 
         state_ = Stopped;
 

@@ -5,19 +5,19 @@ Man-in-the-Middle basis for SQ Mix control
 
 ### discovery
 ```shell
-Usage: ./discovery
+Usage: ./sq-discovery
 Just shows which mixers were found and for which there is a timeout (of 5 secs)
 ```
 
 ### discovery-responder
 ```shell
-Usage: ./discovery-responder <name-of-pretend-mixer>
+Usage: ./sq-discovery-responder <name-of-pretend-mixer>
 Listen to any SQ Mixer inquiries and respond such that *this* host is assumed to be a mixer of the SQ series.
 ```
 
 ### midi-control
 ```shell
-Usage: ./midi-control <ip-of-mixer>
+Usage: ./sq-midi-control <ip-of-mixer>
 Connects to mixer and receives MIDI data (well, actually the raw data stream) dumping it to stdout
 ```
 

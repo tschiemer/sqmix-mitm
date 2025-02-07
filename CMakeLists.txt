@@ -19,11 +19,11 @@ target_include_directories(sqmixmitm PUBLIC src)
 
 include_directories(src)
 
-add_executable(discovery EXCLUDE_FROM_ALL src/tools/discovery.cpp)
-target_link_libraries(discovery sqmixmitm)
+add_executable(sq-discovery EXCLUDE_FROM_ALL src/tools/discovery.cpp)
+target_link_libraries(sq-discovery sqmixmitm)
 
-add_executable(discovery-responder EXCLUDE_FROM_ALL src/tools/discovery-responder.cpp)
-target_link_libraries(discovery-responder sqmixmitm)
+add_executable(sq-discovery-responder EXCLUDE_FROM_ALL src/tools/discovery-responder.cpp)
+target_link_libraries(sq-discovery-responder sqmixmitm)
 
-add_executable(midi-control EXCLUDE_FROM_ALL src/tools/midi-control.cpp)
-target_link_libraries(midi-control sqmixmitm)
+add_executable(sq-midi-control EXCLUDE_FROM_ALL src/tools/midi-control.cpp)
+target_link_libraries(sq-midi-control sqmixmitm)

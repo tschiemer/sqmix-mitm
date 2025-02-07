@@ -1,5 +1,5 @@
 /**
-* sqmix_mitm
+* sqmix-mitm
 * Copyright (C) 2025  Philip Tschiemer
 *
 * This program is free software: you can redistribute it and/or modify
@@ -16,34 +16,28 @@
         * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SQMIX_MITM_DISCOVERYSERVICE_H
-#define SQMIX_MITM_DISCOVERYSERVICE_H
+#ifndef SQMIX_MITM_MIDICONTROL_H
+#define SQMIX_MITM_MIDICONTROL_H
 
-#include <string>
 #include <thread>
-
-#include <sys/socket.h>
-#include <netinet/in.h>
 
 namespace SQMixMitm {
 
-    class DiscoveryService {
+    class MidiControl {
 
     public:
 
         enum State {Stopped, Starting, Running, Stopping};
 
+        typedef std::function<void(char [], unsigned int)> ReceivedDataCallback;
+
     public:
 
-        static constexpr unsigned int Port = 51320;
-        static constexpr char DiscoveryMessage[] = "SQ Find";
+        static constexpr unsigned int Port = 51325;
 
     protected:
 
-        std::string name_ = "";
-
         int sockfd_ = -1;
-        struct sockaddr_in servaddr_;
 
         std::atomic<State> state_ = Stopped;
 
@@ -51,23 +45,19 @@ namespace SQMixMitm {
 
     public:
 
-        std::string &name(){ return name_; }
-
-        void name(char name[]){
-            name_ = name;
-        }
-
-        void name(std::string &name){
-            name_ = name;
-        }
-
         State state(){ return state_; }
 
-        int start();
-        int stop();
+        int connect(std::string &mixerIp, ReceivedDataCallback callback);
 
+        int connect(char mixerIp[], ReceivedDataCallback callback){
+            return connect(mixerIp, callback);
+        }
+
+        int disconnect();
+
+        int send(const void * data, size_t len);
     };
 
 } // SQMixMitm
 
-#endif //SQMIX_MITM_DISCOVERYSERVICE_H
+#endif //SQMIX_MITM_MIDICONTROL_H

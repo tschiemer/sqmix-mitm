@@ -18,13 +18,15 @@
 * For code source also see: https://www.geeksforgeeks.org/udp-server-client-implementation-c/
 */
 
-#include "DiscoveryService.h"
+#include "DiscoveryResponder.h"
 
 #include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 namespace SQMixMitm {
 
-    int DiscoveryService::start(){
+    int DiscoveryResponder::start(){
 
         if (state_ != Stopped){
             return EXIT_FAILURE;
@@ -49,17 +51,17 @@ namespace SQMixMitm {
         timeout.tv_usec = 500000;
         setsockopt(sockfd_, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
-        memset(&servaddr_, 0, sizeof(servaddr_));
+
+        struct sockaddr_in servaddr;
+        memset(&servaddr, 0, sizeof(servaddr));
 
         // Filling server information
-        servaddr_.sin_family    = AF_INET; // IPv4
-        servaddr_.sin_addr.s_addr = INADDR_ANY;
-        servaddr_.sin_port = htons(Port);
+        servaddr.sin_family    = AF_INET; // IPv4
+        servaddr.sin_addr.s_addr = INADDR_ANY;
+        servaddr.sin_port = htons(Port);
 
         // Bind the socket with the server address
-        if ( bind(sockfd_, (const struct sockaddr *)&servaddr_,
-                  sizeof(servaddr_)) < 0 )
-        {
+        if (bind(sockfd_, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ){
             perror("bind failed");
             state_ = Stopped;
             return EXIT_FAILURE;
@@ -69,7 +71,7 @@ namespace SQMixMitm {
 
         thread_ = new std::thread([&](){
 
-            char buffer[sizeof(DiscoveryMessage)]; // only need a buffer of this size
+            char buffer[2*sizeof(DiscoveryMessage)]; // only need a buffer of this size
 
 
             struct sockaddr_in cliaddr;
@@ -94,7 +96,13 @@ namespace SQMixMitm {
                         state_ = Stopping;
                     }
                 } else {
-                    sendto(sockfd_, (const char *)name_.data(), name_.length()+1, 0, (const struct sockaddr *) &cliaddr, len);
+
+                    // basic sanity check if discovery request was sent
+                    if (n == sizeof(DiscoveryMessage)-1 && memcmp(buffer, DiscoveryMessage, sizeof(DiscoveryMessage)-1) == 0){
+                        if (sendto(sockfd_, (const char *)name_.data(), name_.length()+1, 0, (const struct sockaddr *) &cliaddr, len) < 0){
+                            perror("sendto");
+                        }
+                    }
                 }
             } // while running
 
@@ -104,7 +112,7 @@ namespace SQMixMitm {
         return EXIT_SUCCESS;
     }
 
-    int DiscoveryService::stop(){
+    int DiscoveryResponder::stop(){
         if (state_ == Stopped){
             return EXIT_SUCCESS;
         }

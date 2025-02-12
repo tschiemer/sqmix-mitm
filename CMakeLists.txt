@@ -13,7 +13,7 @@ add_library(sqmixmitm
         src/MidiControl.cpp
         src/MidiControl.h
         src/MitmService.cpp
-        src/MitmService.h)
+        src/MitmService.h src/MixMitm.cpp src/MixMitm.h)
 target_include_directories(sqmixmitm PUBLIC src)
 
 
@@ -27,3 +27,6 @@ target_link_libraries(sq-discovery-responder sqmixmitm)
 
 add_executable(sq-midi-control EXCLUDE_FROM_ALL src/tools/midi-control.cpp)
 target_link_libraries(sq-midi-control sqmixmitm)
+
+add_executable(sq-mitm EXCLUDE_FROM_ALL src/tools/mitm.cpp)
+target_link_libraries(sq-mitm sqmixmitm)

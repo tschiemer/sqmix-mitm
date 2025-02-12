@@ -21,6 +21,12 @@ Usage: ./sq-midi-control <ip-of-mixer>
 Connects to mixer and receives MIDI data (well, actually the raw data stream) dumping it to stdout
 ```
 
+### mitm
+```shell
+Usage: ./sq-mitm <ip-of-mixer>
+Act as Man-in-the-Middle service for mixer with given IP
+```
+
 ## Protocol basics
 
 ### Ports
@@ -45,6 +51,17 @@ Connects to mixer and receives MIDI data (well, actually the raw data stream) du
 |                                     | --> TCP data: what' s your version?: 7f0100000000                                                      |                              |
 |                                     | <-- TCP data: I use (version 1.5.10r4132 ..... build: release?): 7f020c000000 0201050a2410000000040000 |                              |
 |                                     | < Many more initialization messages sent around, typically initialized by client. >                    |                              |
+
+
+### Keep-Alive
+
+The Client sends a keep-alive message every sec to the mixer through UDP with data `7f0500000000`.
+
+The Mixer sends an identical message every sec.
+
+It is yet unclear what info the client uses to decice where (and if) to send such a keep-alive message.
+Seemingly the test clients do not send any UDP data (or keep alives).
+But it is known that the mixer sends its own MAC address(es?) and its IP in a message every second (data.len == 165 && offset == 101). 
 
 
 ### Some documented messages

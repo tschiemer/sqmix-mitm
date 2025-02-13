@@ -20,9 +20,13 @@
 #define SQMIX_MITM_MIXMITM_H
 
 #include <thread>
+#include <map>
 
 //#include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/poll.h>
+
+#include "Event.h"
 
 namespace SQMixMitm {
 
@@ -32,29 +36,56 @@ namespace SQMixMitm {
 
         enum State {Stopped, Starting, Running, Stopping};
 
+        enum ConnectionState {Disconnected, Connected};
+
         typedef std::function<void(State)> StateChangedCallback;
 
-        typedef std::function<void(unsigned int)> ChannelSelectCallback;
-        typedef std::function<void(unsigned char, unsigned char, unsigned char)> MidiCallback;
+        typedef std::function<void(ConnectionState)> ConnectionStateChangedCallback;
+
+        typedef std::function<void(Event&)> EventCallback;
+
+        class Version {
+            public:
+                uint major = 0;
+                uint minor = 0;
+                uint patch = 0;
+                uint build = 0;
+
+                Version(){}
+
+                Version(uint maj, uint min, uint pat, uint b){
+                    major = maj;
+                    minor = min;
+                    patch = pat;
+                    build = b;
+                }
+
+                bool operator==(Version &other);
+                bool operator<(Version &other);
+                bool operator>(Version &other);
+                bool operator <=(Version &other);
+                bool operator >=(Version &other);
+        };
 
     protected:
 
-        enum ConnectionState {
+        enum InternalState {
             ListeningForApp         = 0,
             AwaitClientUdpPort         ,
             ConnectToMixer          ,
             AwaitMixerUdpPort       ,
             ReadyAwaitingVersion,
             Ready,
-            Disconnected,
-            ClientDisconnected,
-            MixerDisconnected
+            Disconnection,
         };
 
     public:
 
         static constexpr unsigned int UDPStreamingPort = 51324;
         static constexpr unsigned int TCPControlPort = 51326;
+
+        static constexpr unsigned char MsgHeader = 0xf7;
+        static constexpr unsigned char MsgVariableSizeType = 0x08;
 
         static constexpr unsigned char MsgKeepAlive[]        = {0x7f, 0x05, 0x00, 0x00, 0x00, 0x00};
 
@@ -63,21 +94,16 @@ namespace SQMixMitm {
         static constexpr unsigned char MsgVersionRequest[]   = {0x7f, 0x01, 0x00, 0x00, 0x00, 0x00};
         static constexpr unsigned char MsgVersionResponseHdr[]  = {0x7f, 0x02, 0x0c, 0x00, 0x00, 0x00};
 
-        static constexpr unsigned char MsgSoftControlMIDIHdr[]   = {0xf7, 0x21, 0x1f, 0x14};
+
+//        static constexpr unsigned char MsgSoftControlMIDIHdr[]   = {0xf7, 0x21, 0x1f, 0x14};
 
     protected:
 
         std::atomic<State> state_ = Stopped;
-        std::atomic<ConnectionState> connectionState_;
-
-        StateChangedCallback stateChangedCallback_ = nullptr;
-
-        ChannelSelectCallback channelSelectCallback_ = nullptr;
-        MidiCallback midiCallback_ = nullptr;
+        std::atomic<InternalState> internalState_;
 
         int udpServerSockfd_ = -1;
         int tcpServerSockfd_ = -1;
-
 
         struct {
             int tcpSockfd = -1;
@@ -101,10 +127,19 @@ namespace SQMixMitm {
 
     protected:
 
-        void setConnectionState(ConnectionState state){
-            connectionState_ = state;
-//            printf("ConnectionState = %d\n", state);
-        }
+        Version version_;
+
+        StateChangedCallback stateChangedCallback_ = nullptr;
+        ConnectionStateChangedCallback connectionStateChangedCallback_ = nullptr;
+
+        std::map<Event::Type, EventCallback> eventCallbacks_;
+
+    public:
+
+
+    protected:
+
+        void setInternalState(InternalState state);
 
         int setSocketBlocking(int sockfd, int enable);
         int setSocketTimeout(int sockfd, std::chrono::milliseconds ms);
@@ -126,20 +161,24 @@ namespace SQMixMitm {
         int processMixerUdp();
 
         int sendUdpPortTo(int sockfd, int port);
-        int sendVersionRequestTo(int sockfd);
 
+        void waitUntilEvent(int timeout_ms);
         int processingLoop();
 
-
+        void publishEvent(Event &event);
 
     public:
 
-        void onStateChanged(StateChangedCallback callback){ stateChangedCallback_ = callback; }
-
-        void onChannelSelect(ChannelSelectCallback callback){ channelSelectCallback_ = callback; }
-        void onMidi(MidiCallback callback){ midiCallback_ = callback; }
-
         State state(){ return state_; }
+        ConnectionState connectionState() { return (internalState_ == Ready ? Connected : Disconnected); }
+
+        Version version(){ return version_; }
+
+        void onStateChanged(StateChangedCallback callback){ stateChangedCallback_ = callback; }
+        void onConnectionStateChanged(ConnectionStateChangedCallback callback){ connectionStateChangedCallback_ = callback; }
+
+        void onEvent(Event::Type type, EventCallback callback);
+
 
         int start(std::string &mixerIp);
 

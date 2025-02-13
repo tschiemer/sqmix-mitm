@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 project(sqmix-mitm)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 
 
@@ -12,8 +12,12 @@ add_library(sqmixmitm
         src/DiscoveryResponder.h
         src/MidiControl.cpp
         src/MidiControl.h
+        src/MixMitm.cpp
+        src/MixMitm.h
         src/MitmService.cpp
-        src/MitmService.h src/MixMitm.cpp src/MixMitm.h)
+        src/MitmService.h
+        src/Event.cpp
+        src/Event.h)
 target_include_directories(sqmixmitm PUBLIC src)
 
 

@@ -27,6 +27,7 @@
 #include <sys/poll.h>
 
 #include "Event.h"
+#include "Command.h"
 
 namespace SQMixMitm {
 
@@ -179,6 +180,7 @@ namespace SQMixMitm {
 
         void onEvent(Event::Type type, EventCallback callback);
 
+        void sendCommand(Command command);
 
         int start(std::string &mixerIp);
 

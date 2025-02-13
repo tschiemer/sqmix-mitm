@@ -550,11 +550,29 @@ namespace SQMixMitm {
                 setInternalState(Ready);
             }
 
+            // well, this here is not proper handling of the incoming data stream, but it's working well enough
+            // the semantics of the protocol are a bit unclear, sometimes bytes 2-5 denote the length of the data
+            // and sometimes it seems they denote a sort of subtype.
             for(unsigned int i = 0; i+7 < n;){
-                // sanity check
+
+                // sanity check, if this fails then this is not the start of a message we should be looking at
                 if (MsgHeader != (unsigned char)buffer[i]){
                     break;
                 }
+
+                // first check if it is a type known to us
+                if (Event::isValidType(buffer)){
+                    // if so, process it further
+                    Event event(buffer + i);
+                    publishEvent(event);
+
+                    // for all we know, all these events are exactly 8 bytes long
+                    i += 8;
+                    continue;
+                }
+
+                // messages with variable size typically have a 0x08 as second byte
+                // and data size is little-endian within the next four bytes
                 if (MsgVariableSizeType == (unsigned char)buffer[i+1]){
                     i += 2;
                     unsigned int j = buffer[i++];
@@ -563,13 +581,11 @@ namespace SQMixMitm {
                     j += ((unsigned int)buffer[i++]) << 24;
 //                    printf("++ %d\n" , j);
                     i += j;
-                } else {
-                    Event event(buffer + i);
-                    if (eventCallbacks_.contains(event.type)){
-                        publishEvent(event);
-                    }
-                    i += 8;
+                    continue;
                 }
+
+                // this is just a guess as many messages are just 8 bytes long
+                i += 8;
             }
 
         }
@@ -796,6 +812,7 @@ namespace SQMixMitm {
 //        printf("Publishing? %08x %08x\n", event.type, event.data);
 
         EventCallback callback = eventCallbacks_[event.type];
+
         // sanity check
         if (callback != nullptr){
             callback(event);
@@ -809,6 +826,23 @@ namespace SQMixMitm {
             }
         } else {
             eventCallbacks_[type] = callback;
+        }
+    }
+
+
+    void MixMitm::sendCommand(Command command){
+        if (internalState_ != Ready || state_ != Running){
+            return;
+        }
+
+//        printf("Sending: ");
+//        for(int i = 0; i < sizeof(command.bytes); i++){
+//            printf("%02x", command.bytes[i]);
+//        }
+//        printf("\n");
+
+        if (write(mixer_.tcp.sockfd, command.bytes, sizeof(command.bytes)) < 0){
+            perror("Failed to send command");
         }
     }
 

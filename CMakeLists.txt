@@ -17,7 +17,9 @@ add_library(sqmixmitm
         src/MitmService.cpp
         src/MitmService.h
         src/Event.cpp
-        src/Event.h)
+        src/Event.h
+        src/Command.cpp
+        src/Command.h)
 target_include_directories(sqmixmitm PUBLIC src)
 
 

@@ -23,11 +23,57 @@
 //#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <cassert>
 
 
 #define BUFSIZE_MTU 1500
 
 namespace SQMixMitm {
+
+    bool MixMitm::Version::operator==(Version &other){
+        return (major == other.major &&
+                minor == other.minor &&
+                (patch == 0 || other.patch == 0 || patch == other.patch));
+    }
+    bool MixMitm::Version::operator<(Version &other){
+        return (major < other.major ||
+                (major == other.major &&
+                 (minor < other.minor ||
+                  (minor == other.minor &&
+                   (patch < other.patch)))));
+    }
+    bool MixMitm::Version::operator>(Version &other){
+        return (major > other.major ||
+                (major == other.major &&
+                 (minor > other.minor ||
+                  (minor == other.minor &&
+                   (patch > other.patch)))));
+    }
+    bool MixMitm::Version::operator <=(Version &other){
+        return operator==(other) || operator<(other);
+    }
+    bool MixMitm::Version::operator >=(Version &other){
+        return operator==(other) || operator>(other);
+    }
+
+    void MixMitm::setInternalState(InternalState state){
+        internalState_ = state;
+
+        if (state == Disconnection){
+            version_.major = 0;
+            version_.minor = 0;
+            version_.patch = 0;
+            version_.build = 0;
+        }
+
+        if (connectionStateChangedCallback_ != nullptr){
+            if (state == Ready){
+                connectionStateChangedCallback_(Connected);
+            } else if (state == Disconnection){
+                connectionStateChangedCallback_(Disconnected);
+            }
+        }
+    }
 
     int MixMitm::setSocketBlocking(int sockfd, int enable){
 
@@ -134,6 +180,7 @@ namespace SQMixMitm {
         disconnectTcpClient();
 
         setSocketBlocking(tcpServerSockfd_, 1);
+
         close(tcpServerSockfd_);
         tcpServerSockfd_ = -1;
 
@@ -157,7 +204,7 @@ namespace SQMixMitm {
         } else { // accepted new tcp connection request
 
             // if already connected to a client, just disconnect again
-            if (connectionState_ != ListeningForApp) {
+            if (internalState_ != ListeningForApp) {
                 close(sockfd);
             } else { // otherwise try to connect
 
@@ -169,7 +216,7 @@ namespace SQMixMitm {
 
                 setSocketBlocking(sockfd, 0);
 
-                setConnectionState(AwaitClientUdpPort);
+                setInternalState(AwaitClientUdpPort);
             }
 
         } // accepted new tcp connection request
@@ -187,8 +234,8 @@ namespace SQMixMitm {
             // if client hanged up
             if (n == 0){
                 printf("client disconnected\n");
-                setConnectionState(Disconnected);
-                //TODO event?
+                setInternalState(Disconnection);
+
                 return EXIT_SUCCESS;
             }
             // if timeout, just ignore
@@ -202,15 +249,24 @@ namespace SQMixMitm {
             }
         }
 
-        if (connectionState_ == Ready || connectionState_ == ReadyAwaitingVersion) {
+        if (internalState_ == Ready || internalState_ == ReadyAwaitingVersion) {
 
             // pass along to app
             if (write(mixer_.tcp.sockfd, buffer, n) < 0){
                 perror("failed forwarding to mixer.tcp");
                 return EXIT_FAILURE;
             }
+
+            if (internalState_ == Ready && n == 8){
+                Event event(buffer);
+
+                EventCallback callback = eventCallbacks_[event.type];
+                if (callback){
+                    callback(event);
+                }
+            }
         }
-        else if (connectionState_ == AwaitClientUdpPort){
+        else if (internalState_ == AwaitClientUdpPort){
 
             if (n == sizeof(MsgUdpPortInfo) && memcmp(buffer, MsgUdpPortInfo, sizeof(MsgUdpPortInfo)-2) == 0){
 
@@ -220,13 +276,13 @@ namespace SQMixMitm {
 
                 printf("Client UDP port = %d\n", htons(p));
 
-                setConnectionState(ConnectToMixer);
+                setInternalState(ConnectToMixer);
             } else {
                 perror("UDP client did not send used UDP port, hanging up");
 
                 disconnectTcpClient();
 
-                setConnectionState(ListeningForApp);
+                setInternalState(ListeningForApp);
                 return EXIT_FAILURE;
             }
         }
@@ -337,7 +393,7 @@ namespace SQMixMitm {
                 }
             }
             // only process if connection is all ready && packet coming from actual client
-            else if (connectionState_ == Ready){// && srcaddr.sin_addr.s_addr == client_.addr.s_addr && srcaddr.sin_port == client_.udpPort) {
+            else if (internalState_ == Ready){// && srcaddr.sin_addr.s_addr == client_.addr.s_addr && srcaddr.sin_port == client_.udpPort) {
 
                 struct sockaddr_in dstaddr;
                 memset(&dstaddr, 0, sizeof(dstaddr));
@@ -460,10 +516,8 @@ namespace SQMixMitm {
 
             // if mixer closed connection
             if (n == 0){
-                //TODO cleanup
-                // no data?
-                printf("mixer disconnected\n");
-                setConnectionState(Disconnected);
+//                printf("mixer disconnected\n");
+                setInternalState(Disconnection);
                 return EXIT_SUCCESS;
             }
             // if timeout, just ignore
@@ -476,45 +530,54 @@ namespace SQMixMitm {
                 return EXIT_FAILURE;
             }
         }
-        else if (connectionState_ == Ready || connectionState_ == ReadyAwaitingVersion) {
+        else if (internalState_ == Ready || internalState_ == ReadyAwaitingVersion) {
 
             // pass along to app
-
-            if (n == 165){
-                // local mac + ip
-                constexpr unsigned char mac[] = {0x5c, 0x1b, 0xf4, 0x81, 0x22, 0x39};
-                constexpr unsigned char ip[] = {10,0,10,253};
-
-
-//                memcpy(&buffer[77], mac, sizeof(mac));
-                // inverted copy
-//                for(int i = 0; i < sizeof(mac); i++){
-//                    buffer[77+i] = mac[5-i];
-//                }
-//                memcpy(&buffer[101], ip, sizeof(ip));
-//
-//                printf("ip inserted\n");
-            }
 
             if (write(client_.tcpSockfd, buffer, n) < 0){
                 perror("failed forwarding to mixer.tcp");
                 return EXIT_FAILURE;
             }
 
-            if (connectionState_ == ReadyAwaitingVersion){
-                printf("ReadyAwaitingVersion rx (%d)\n", n);
+            if (internalState_ == ReadyAwaitingVersion){
+
                 if (n == 18 && memcmp(buffer, MsgVersionResponseHdr, sizeof(MsgVersionResponseHdr)) == 0){
-                    //TODO deal with version data (compatibility change?)
+                    version_.major = (uint)buffer[7];
+                    version_.minor = (uint)buffer[8];
+                    version_.patch = (uint)buffer[9];
+                    version_.build = (uint)buffer[10] + (((uint)buffer[11]) << 8);
                 }
-                setConnectionState(Ready);
+                setInternalState(Ready);
+            }
+
+            for(unsigned int i = 0; i+7 < n;){
+                // sanity check
+                if (MsgHeader != (unsigned char)buffer[i]){
+                    break;
+                }
+                if (MsgVariableSizeType == (unsigned char)buffer[i+1]){
+                    i += 2;
+                    unsigned int j = buffer[i++];
+                    j += ((unsigned int)buffer[i++]) << 8;
+                    j += ((unsigned int)buffer[i++]) << 16;
+                    j += ((unsigned int)buffer[i++]) << 24;
+//                    printf("++ %d\n" , j);
+                    i += j;
+                } else {
+                    Event event(buffer + i);
+                    if (eventCallbacks_.contains(event.type)){
+                        publishEvent(event);
+                    }
+                    i += 8;
+                }
             }
 
         }
-        else if (connectionState_ ==  AwaitMixerUdpPort){
+        else if (internalState_ == AwaitMixerUdpPort){
 
 //            printf("AwaitMixerUdpPort TCP.rx (%d)\n", n);
 
-            if (n == sizeof(MsgUdpPortInfo) && memcmp(buffer, MsgUdpPortInfo, sizeof(MsgUdpPortInfo)-2) == 0){
+            if (n >= sizeof(MsgUdpPortInfo) && memcmp(buffer, MsgUdpPortInfo, sizeof(MsgUdpPortInfo)-2) == 0){
 
                 // get mixer udp port from msg
                 int p = (((unsigned char)buffer[7]) << 8) | buffer[6];
@@ -529,7 +592,14 @@ namespace SQMixMitm {
                     return EXIT_FAILURE;
                 }
 
-                setConnectionState(ReadyAwaitingVersion);
+                setInternalState(ReadyAwaitingVersion);
+
+                // the client sends both messages right away, so the version request might get caught here already
+                // in that case, let's just trigger sending it directly instead of passing it on later elsewhere
+                // during the normal processing
+                if (n == sizeof(MsgUdpPortInfo) + sizeof(MsgVersionRequest) && memcmp(buffer + sizeof(MsgUdpPortInfo), MsgVersionRequest, sizeof(MsgVersionRequest))){
+                    write(mixer_.tcp.sockfd, MsgVersionRequest, sizeof(MsgVersionRequest));
+                }
 
             } else {
                 perror("expected other first message from mixer");
@@ -568,7 +638,7 @@ namespace SQMixMitm {
                 }
             }
             // only process if ready && packet coming from mixer
-            else if (connectionState_ == Ready && srcaddr.sin_addr.s_addr == mixer_.addr.s_addr && srcaddr.sin_port == mixer_.udp.remotePort) {
+            else if (internalState_ == Ready && srcaddr.sin_addr.s_addr == mixer_.addr.s_addr && srcaddr.sin_port == mixer_.udp.remotePort) {
 
                 struct sockaddr_in dstaddr;
                 memset(&dstaddr, 0, sizeof(dstaddr));
@@ -614,16 +684,37 @@ namespace SQMixMitm {
 
         return EXIT_SUCCESS;
     }
-    int MixMitm::sendVersionRequestTo(int sockfd){
 
-        if (write(sockfd,MsgVersionRequest, sizeof(MsgVersionRequest)) < 0){
-            perror("socket write error");
-            return EXIT_FAILURE;
+    void MixMitm::waitUntilEvent(int timeout_ms){
+
+        nfds_t n = 0;
+        struct pollfd fds[5];
+
+        if (tcpServerSockfd_ != -1){
+            fds[n++].fd = tcpServerSockfd_;
+        }
+        if (udpServerSockfd_ != -1){
+            fds[n++].fd = udpServerSockfd_;
+        }
+        if (client_.tcpSockfd != -1){
+            fds[n++].fd = client_.tcpSockfd;
+        }
+        if (mixer_.tcp.sockfd != -1){
+            fds[n++].fd = mixer_.tcp.sockfd;
+        }
+        if (mixer_.udp.sockfd != -1){
+            fds[n++].fd = mixer_.udp.sockfd;
         }
 
-        return EXIT_SUCCESS;
-    }
+        for(int i = 0; i < n; i++){
+            fds[i].events = POLLIN | POLLOUT;
+            fds[i].revents = POLLHUP | POLLERR;
+        }
 
+        if (poll(fds, n, timeout_ms) < 0){
+            perror("polling error?!");
+        }
+    }
 
     int MixMitm::processingLoop(){
 
@@ -631,7 +722,7 @@ namespace SQMixMitm {
 
         while(state_ == Running){
 
-            //TODO use select() or poll() to wait for an actual event to happen instead of busy waiting...
+            waitUntilEvent(1000);
 
             // listens for connections, accepts only a single at any single time
             //TODO handle error returns
@@ -641,29 +732,29 @@ namespace SQMixMitm {
             //TODO handle error returns
             processUdpServer();
 
-            if (ListeningForApp < connectionState_ && connectionState_ < Disconnected){
+            if (ListeningForApp < internalState_ && internalState_ < Disconnection){
                 processTcpClient();
             }
 
-            if (ConnectToMixer < connectionState_ && connectionState_ < Disconnected){
+            if (ConnectToMixer < internalState_ && internalState_ < Disconnection){
                 //TODO handle error returns
                 processMixerTcp();
                 processMixerUdp();
             }
             else {
-                if (connectionState_ == AwaitClientUdpPort){
+                if (internalState_ == AwaitClientUdpPort){
                     // is handled in processTcpClient()
                     // if received: --> ConnectToMixer
                     // if other first message: --> TODO
                 }
-                if (connectionState_ == ConnectToMixer){
+                if (internalState_ == ConnectToMixer){
                     if (connectToMixer()){
                         perror("failed connection to mixer");
 
                         disconnectTcpClient();
 
 //                        connectionState_ = ListeningForApp;
-                        setConnectionState(ListeningForApp);
+                        setInternalState(ListeningForApp);
                         continue;
                     }
 
@@ -677,30 +768,48 @@ namespace SQMixMitm {
                         disconnectTcpClient();
 //                        connectionState_ = ListeningForApp;
 
-                        setConnectionState(Disconnected);
+                        setInternalState(Disconnection);
 
                         continue;
                     }
 
-                    setConnectionState(AwaitMixerUdpPort);
+                    setInternalState(AwaitMixerUdpPort);
                 }
 
-                if (connectionState_ == Disconnected){
+                if (internalState_ == Disconnection){
 
                     disconnectFromMixer();
                     disconnectTcpClient();
 
-                    setConnectionState(ListeningForApp);
+                    setInternalState(ListeningForApp);
                 }
             }
-
-//            std::this_thread::sleep_for(std::chrono::microseconds (1000000));
-        }
+        } // while (Running)
 
         disconnectTcpClient();
         disconnectFromMixer();
 
         return EXIT_SUCCESS;
+    }
+
+    void MixMitm::publishEvent(Event &event){
+//        printf("Publishing? %08x %08x\n", event.type, event.data);
+
+        EventCallback callback = eventCallbacks_[event.type];
+        // sanity check
+        if (callback != nullptr){
+            callback(event);
+        }
+    }
+
+    void MixMitm::onEvent(Event::Type type, EventCallback callback){
+        if (callback == nullptr){
+            if (eventCallbacks_.contains(type)){
+                eventCallbacks_.erase(type);
+            }
+        } else {
+            eventCallbacks_[type] = callback;
+        }
     }
 
     int MixMitm::start(std::string &mixerIp){
@@ -728,7 +837,7 @@ namespace SQMixMitm {
         }
 
 //        connectionState_ = ListeningForApp;
-        setConnectionState(ListeningForApp);
+        setInternalState(ListeningForApp);
 
         thread_ = new std::thread(&MixMitm::processingLoop, this);
 

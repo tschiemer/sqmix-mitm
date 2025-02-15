@@ -13,14 +13,34 @@
 * GNU Affero General Public License for more details.
 *
 * You should have received a copy of the GNU Affero General Public License
-        * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+* along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "MitmService.h"
+#ifndef SQMIX_MITM_LOG_H
+#define SQMIX_MITM_LOG_H
 
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include <cstdio>
 
 namespace SQMixMitm {
 
-}
+    enum LogLevel {LogLevelNone, LogLevelInfo, LogLevelDebug};
+
+    inline bool isValidLogLevel(LogLevel logLevel){
+        return (
+                LogLevelNone == logLevel ||
+                LogLevelInfo == logLevel ||
+                LogLevelDebug == logLevel
+        );
+    }
+
+    void setLogLevel(LogLevel level);
+
+    void setLogFile(FILE * file);
+
+    void log(LogLevel level, const char * msg, ...);
+
+    void error(const char * msg, ...);
+
+} // SQMixMitm
+
+#endif //SQMIX_MITM_LOG_H

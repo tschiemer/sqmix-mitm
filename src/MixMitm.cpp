@@ -25,6 +25,8 @@
 #include <fcntl.h>
 #include <cassert>
 
+#include "log.h"
+
 
 #define BUFSIZE_MTU 1500
 
@@ -212,7 +214,8 @@ namespace SQMixMitm {
                 client_.addr.s_addr = addr.sin_addr.s_addr;
 
                 char * ip = inet_ntoa(addr.sin_addr);
-                printf("Connection from %s:%d\n", ip, ntohs(addr.sin_port));
+
+                log(LogLevelInfo, "Connection from %s:%d", ip, ntohs(addr.sin_port));
 
                 setSocketBlocking(sockfd, 0);
 
@@ -233,8 +236,9 @@ namespace SQMixMitm {
 
             // if client hanged up
             if (n == 0){
-                printf("client disconnected\n");
                 setInternalState(Disconnection);
+
+                log(LogLevelInfo, "Client disconnected");
 
                 return EXIT_SUCCESS;
             }
@@ -274,7 +278,7 @@ namespace SQMixMitm {
                 int p = (((unsigned char)buffer[7]) << 8) | buffer[6];
                 client_.udpPort = htons(p);
 
-                printf("Client UDP port = %d\n", htons(p));
+                log(LogLevelDebug, "Client UDP port = %d", htons(p));
 
                 setInternalState(ConnectToMixer);
             } else {
@@ -287,8 +291,7 @@ namespace SQMixMitm {
             }
         }
         else { // any other state
-            printf("tcp.rx (%d) DISCARDING\n" , n);
-            // TODO do nothing?
+            log(LogLevelDebug, "discarding tcp data (len=%d)", n);
         }
 
         return EXIT_SUCCESS;
@@ -480,7 +483,7 @@ namespace SQMixMitm {
         getsockname(mixer_.udp.sockfd, (struct sockaddr *)&udpservaddr, &socklen);
         mixer_.udp.localPort = udpservaddr.sin_port;
 
-        printf("Mixer.UDP local port = %d\n", ntohs(udpservaddr.sin_port));
+        log(LogLevelDebug, "Local UDP port for mixer con: %d", ntohs(udpservaddr.sin_port));
 
         setSocketBlocking(mixer_.tcp.sockfd, 0);
         setSocketBlocking(mixer_.udp.sockfd, 0);
@@ -516,8 +519,10 @@ namespace SQMixMitm {
 
             // if mixer closed connection
             if (n == 0){
-//                printf("mixer disconnected\n");
                 setInternalState(Disconnection);
+
+                log(LogLevelDebug, "Mixer disconnected");
+
                 return EXIT_SUCCESS;
             }
             // if timeout, just ignore
@@ -599,7 +604,7 @@ namespace SQMixMitm {
                 int p = (((unsigned char)buffer[7]) << 8) | buffer[6];
                 mixer_.udp.remotePort = htons(p);
 
-                printf("Mixer UDP remote port = %d\n", p);
+                log(LogLevelDebug, "UDP port of mixer = %d", p);
 
                 // use this point in time to respond to client with own udp port msg
                 if (sendUdpPortTo(client_.tcpSockfd, UDPStreamingPort)){

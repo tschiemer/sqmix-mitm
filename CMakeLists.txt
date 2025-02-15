@@ -14,12 +14,12 @@ add_library(sqmixmitm
         src/MidiControl.h
         src/MixMitm.cpp
         src/MixMitm.h
-        src/MitmService.cpp
-        src/MitmService.h
         src/Event.cpp
         src/Event.h
         src/Command.cpp
-        src/Command.h)
+        src/Command.h
+        src/log.cpp
+        src/log.h)
 target_include_directories(sqmixmitm PUBLIC src)
 
 

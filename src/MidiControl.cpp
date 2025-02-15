@@ -77,10 +77,14 @@ namespace SQMixMitm {
 
             while (state_ == Running){
 
-                if ((n = read(sockfd_, (char *)buffer, sizeof(buffer))) < 0){
+                if ((n = read(sockfd_, (char *)buffer, sizeof(buffer))) <= 0){
 
+                    // if other side closed connection
+                    if (n == 0){
+                        state_ = Stopping;
+                    }
                     // if timeout, just ignore
-                    if (errno == EAGAIN){
+                    else if (errno == EAGAIN){
                         // do nothing
                     } else {
                         perror("Unknown socket error, stopping\n");

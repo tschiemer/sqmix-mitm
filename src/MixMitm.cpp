@@ -32,29 +32,49 @@
 
 namespace SQMixMitm {
 
+    MixMitm::Version::Version(Version &other){
+        memcpy(bytes_, other.bytes_, sizeof(bytes_));
+    }
+
+    MixMitm::Version::Version(uint8_t major, uint8_t minor, uint8_t patch, uint16_t build){
+        bytes_[7] = major;
+        bytes_[8] = minor;
+        bytes_[9] = patch;
+        bytes_[10] = build & 0xff;
+        bytes_[11] = (build >> 8) & 0xff;
+    }
+
+    void MixMitm::Version::fromBytes(char bytes[]){
+        memcpy(bytes_, bytes, sizeof(bytes_));
+    }
+
+    void MixMitm::Version::clear(){
+        memset(bytes_, 0, sizeof(bytes_));
+    }
+
     bool MixMitm::Version::operator==(Version &other){
-        return (major == other.major &&
-                minor == other.minor &&
-                (patch == 0 || other.patch == 0 || patch == other.patch));
+        return (major() == other.major() &&
+                minor() == other.minor() &&
+                (patch() == 0 || other.patch() == 0 || patch() == other.patch()));
     }
     bool MixMitm::Version::operator<(Version &other){
-        return (major < other.major ||
-                (major == other.major &&
-                 (minor < other.minor ||
-                  (minor == other.minor &&
-                   (patch < other.patch)))));
+        return (major() < other.major() ||
+                (major() == other.major() &&
+                 (minor() < other.minor() ||
+                  (minor() == other.minor() &&
+                   (patch() < other.patch())))));
     }
     bool MixMitm::Version::operator>(Version &other){
-        return (major > other.major ||
-                (major == other.major &&
-                 (minor > other.minor ||
-                  (minor == other.minor &&
-                   (patch > other.patch)))));
+        return (major() > other.major() ||
+                (major() == other.major() &&
+                 (minor() > other.minor() ||
+                  (minor() == other.minor() &&
+                   (patch() > other.patch())))));
     }
-    bool MixMitm::Version::operator <=(Version &other){
+    bool MixMitm::Version::operator<=(Version &other){
         return operator==(other) || operator<(other);
     }
-    bool MixMitm::Version::operator >=(Version &other){
+    bool MixMitm::Version::operator>=(Version &other){
         return operator==(other) || operator>(other);
     }
 
@@ -62,17 +82,14 @@ namespace SQMixMitm {
         internalState_ = state;
 
         if (state == Disconnection){
-            version_.major = 0;
-            version_.minor = 0;
-            version_.patch = 0;
-            version_.build = 0;
+            version_.clear();
         }
 
         if (connectionStateChangedCallback_ != nullptr){
             if (state == Ready){
-                connectionStateChangedCallback_(Connected);
+                connectionStateChangedCallback_(Connected,version_);
             } else if (state == Disconnection){
-                connectionStateChangedCallback_(Disconnected);
+                connectionStateChangedCallback_(Disconnected,version_);
             }
         }
     }
@@ -547,10 +564,9 @@ namespace SQMixMitm {
             if (internalState_ == ReadyAwaitingVersion){
 
                 if (n == 18 && memcmp(buffer, MsgVersionResponseHdr, sizeof(MsgVersionResponseHdr)) == 0){
-                    version_.major = (uint)buffer[7];
-                    version_.minor = (uint)buffer[8];
-                    version_.patch = (uint)buffer[9];
-                    version_.build = (uint)buffer[10] + (((uint)buffer[11]) << 8);
+
+                    version_.fromBytes(buffer + sizeof(MsgVersionResponseHdr));
+
                 }
                 setInternalState(Ready);
             }

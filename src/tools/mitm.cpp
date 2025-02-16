@@ -209,12 +209,11 @@ int main(int argc, char * argv[]) {
         }
     });
 
-    mixMitm.onConnectionStateChanged([&mixMitm, &opt](SQMixMitm::MixMitm::ConnectionState state){
+    mixMitm.onConnectionStateChanged([&mixMitm, &opt](SQMixMitm::MixMitm::ConnectionState state, SQMixMitm::MixMitm::Version version){
         if (state == SQMixMitm::MixMitm::Connected) {
-            SQMixMitm::MixMitm::Version version = mixMitm.version();
             printf(
                     "CONNECTION STATE connected (mixer firmware %d.%d.%d r%d)\n"
-                    , version.major, version.minor, version.patch, version.build
+                    , version.major(), version.minor(), version.patch(), version.build()
             );
 
             if (opts.midisend){

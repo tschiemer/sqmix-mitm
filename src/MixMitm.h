@@ -39,34 +39,39 @@ namespace SQMixMitm {
 
         enum ConnectionState {Disconnected, Connected};
 
+        class Version {
+
+        public:
+
+            char bytes_[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
+
+            Version(){}
+
+            Version(Version &other);
+
+            Version(uint8_t major, uint8_t minor, uint8_t patch, uint16_t build);
+
+            void fromBytes(char bytes[]);
+            void clear();
+
+            inline uint8_t major(){ return bytes_[7]; }
+            inline uint8_t minor(){ return bytes_[8]; }
+            inline uint8_t patch(){ return bytes_[9]; }
+            inline uint16_t build(){ return (uint)bytes_[10] + (((uint)bytes_[11]) << 8); }
+
+            bool operator==(Version &other);
+            bool operator<(Version &other);
+            bool operator>(Version &other);
+            bool operator<=(Version &other);
+            bool operator>=(Version &other);
+        };
+
         typedef std::function<void(State)> StateChangedCallback;
 
-        typedef std::function<void(ConnectionState)> ConnectionStateChangedCallback;
+        typedef std::function<void(ConnectionState, Version&)> ConnectionStateChangedCallback;
 
         typedef std::function<void(Event&)> EventCallback;
 
-        class Version {
-            public:
-                uint major = 0;
-                uint minor = 0;
-                uint patch = 0;
-                uint build = 0;
-
-                Version(){}
-
-                Version(uint maj, uint min, uint pat, uint b){
-                    major = maj;
-                    minor = min;
-                    patch = pat;
-                    build = b;
-                }
-
-                bool operator==(Version &other);
-                bool operator<(Version &other);
-                bool operator>(Version &other);
-                bool operator <=(Version &other);
-                bool operator >=(Version &other);
-        };
 
     protected:
 

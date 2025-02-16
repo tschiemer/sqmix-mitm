@@ -114,7 +114,8 @@ namespace SQMixMitm {
         }
 
 
-        inline uint8_t MidiFaderLevel_channel(){ return databyte0(); }
+        // interestingly enough, once the value is above 127, the channel increases by one...
+        inline uint8_t MidiFaderLevel_channel(){ return databyte0() + (databyte2() > 127); }
         inline uint8_t MidiFaderLevel_value(){ return databyte2(); }
 
         inline uint8_t MidiFaderMute_channel(){ return databyte0(); }

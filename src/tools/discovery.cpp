@@ -19,7 +19,7 @@
 #include <cstdio>
 #include <csignal>
 
-#include "Discovery.h"
+#include "sqmixmitm/Discovery.h"
 
 int main(int argc, char * argv[]) {
 

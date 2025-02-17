@@ -23,23 +23,27 @@
 
 namespace SQMixMitm {
 
-    enum LogLevel {LogLevelNone, LogLevelInfo, LogLevelDebug};
+    enum LogLevel {LogLevelNone, LogLevelError, LogLevelInfo, LogLevelDebug};
+
+    typedef void (*LogFunction)(LogLevel,const char *,...);
 
     inline bool isValidLogLevel(LogLevel logLevel){
         return (
                 LogLevelNone == logLevel ||
+                LogLevelError == logLevel ||
                 LogLevelInfo == logLevel ||
                 LogLevelDebug == logLevel
         );
     }
 
+    LogLevel getLogLevel();
     void setLogLevel(LogLevel level);
-
     void setLogFile(FILE * file);
+    void setLogFunction(LogFunction &function);
 
-    void log(LogLevel level, const char * msg, ...);
+    void defaultLog(LogLevel level, const char * msg, ...);
 
-    void error(const char * msg, ...);
+    extern LogFunction log;
 
 } // SQMixMitm
 

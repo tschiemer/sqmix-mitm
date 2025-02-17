@@ -19,7 +19,7 @@
 #include <cstdio>
 #include <csignal>
 
-#include "MidiControl.h"
+#include "sqmixmitm/MidiControl.h"
 
 
 int main(int argc, char * argv[]) {

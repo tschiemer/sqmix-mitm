@@ -50,22 +50,6 @@ namespace SQMixMitm {
 
         };
 
-        enum MidiType {
-            NoteOff         = 0x80,
-            NoteOn          = 0x90,
-            ControlChange   = 0xb0,
-            ProgramChange   = 0xc0
-        };
-
-        enum MidiMmcType {
-            Stop            = 0x01,
-            Play            = 0x02,
-            FastForward     = 0x04,
-            Rewind          = 0x05,
-            Record          = 0x06,
-            Pause           = 0x09
-        };
-
         inline static bool isValidType(char bytes[]){
 #if defined(LITTLE_ENDIAN)
             uint32_t type = (bytes[0] << 24) + (bytes[1] << 16) +(bytes[2] << 8) + bytes[3];

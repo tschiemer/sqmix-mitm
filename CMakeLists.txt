@@ -3,36 +3,38 @@ project(sqmix-mitm)
 
 set(CMAKE_CXX_STANDARD 20)
 
-
+set(SQMIXMITM_SUPPORT_SRC
+        src/tools/midi.h
+        )
 
 add_library(sqmixmitm
         src/Discovery.cpp
-        src/Discovery.h
+        include/sqmixmitm/Discovery.h
         src/DiscoveryResponder.cpp
-        src/DiscoveryResponder.h
+        include/sqmixmitm/DiscoveryResponder.h
         src/MidiControl.cpp
-        src/MidiControl.h
+        include/sqmixmitm/MidiControl.h
         src/MixMitm.cpp
-        src/MixMitm.h
+        include/sqmixmitm/MixMitm.h
         src/Event.cpp
-        src/Event.h
+        include/sqmixmitm/Event.h
         src/Command.cpp
-        src/Command.h
+        include/sqmixmitm/Command.h
         src/log.cpp
-        src/log.h)
-target_include_directories(sqmixmitm PUBLIC src)
+        include/sqmixmitm/log.h)
+target_include_directories(sqmixmitm PUBLIC include)
+target_include_directories(sqmixmitm PRIVATE include/sqmixmitm)
 
+#include_directories(include/sqmixmitm)
 
-include_directories(src)
-
-add_executable(sq-discovery EXCLUDE_FROM_ALL src/tools/discovery.cpp)
+add_executable(sq-discovery EXCLUDE_FROM_ALL src/tools/discovery.cpp ${SQMIXMITM_SUPPORT_SRC})
 target_link_libraries(sq-discovery sqmixmitm)
 
-add_executable(sq-discovery-responder EXCLUDE_FROM_ALL src/tools/discovery-responder.cpp)
+add_executable(sq-discovery-responder EXCLUDE_FROM_ALL src/tools/discovery-responder.cpp ${SQMIXMITM_SUPPORT_SRC})
 target_link_libraries(sq-discovery-responder sqmixmitm)
 
-add_executable(sq-midi-control EXCLUDE_FROM_ALL src/tools/midi-control.cpp)
+add_executable(sq-midi-control EXCLUDE_FROM_ALL src/tools/midi-control.cpp ${SQMIXMITM_SUPPORT_SRC})
 target_link_libraries(sq-midi-control sqmixmitm)
 
-add_executable(sq-mitm EXCLUDE_FROM_ALL src/tools/mitm.cpp)
+add_executable(sq-mitm EXCLUDE_FROM_ALL src/tools/mitm.cpp ${SQMIXMITM_SUPPORT_SRC})
 target_link_libraries(sq-mitm sqmixmitm)

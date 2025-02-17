@@ -21,8 +21,10 @@
 #include <getopt.h>
 #include <vector>
 
-#include "MixMitm.h"
+#include "sqmixmitm/MixMitm.h"
+#include "sqmixmitm/log.h"
 
+#include "midi.h"
 
 
 static char * argv0 = nullptr;
@@ -30,34 +32,39 @@ static char * argv0 = nullptr;
 static struct {
     std::vector<SQMixMitm::Event::Type> listenForEvents;
     bool midisend;
+    SQMixMitm::LogLevel logLevel;
 } opts = {
         .midisend = false,
+        .logLevel = SQMixMitm::LogLevelNone
 };
 
 static std::thread * midifader_send_thread = nullptr;
 
 static void help(){
     printf(
-            "Usage: %s [-es] <ip-of-mixer>\n"
+            "Usage: %s [-v] [-e[<event>]]* [-s] <ip-of-mixer>\n"
             "Act as Man-in-the-Middle service for mixer with given IP\n"
             "Note: requires service to be discoverable (such as when using sq-discovery-responder)\n"
             "\nOptions:\n"
-            "\t -e   Show events\n"
-            "\t -s   Slowly fade MIDI faders 1+2 up from 0%% to 100%%\n"
+            "\t -v            Increase verbosity (max 2x)\n"
+            "\t -e[<event>]   Show events, if no option specified shows all events (<event> in \"channelselect\", \"midifader\", \"midisoftkey\", \"midisoftrotary\", \"midimmc\")\n"
+            "\t -s            Slowly fade MIDI faders 1+2 up from 0%% to 100%%\n"
             "\nExamples:\n"
-            "%s -e channelselect -e midisoftcontrol 192.168.1.100\n"
-            , argv0, argv0);
+            "%s -vv -e 192.168.1.100 # very verbose, shows all events\n"
+            "%s -e channelselect 192.168.1.100 # show only channel select events\n"
+            "%s -s 192.168.1.100 # send commands\n"
+            , argv0, argv0, argv0, argv0);
 }
 
 static const char * miditype_name(uint8_t type){
     switch (type & 0xf0){
-        case SQMixMitm::Event::MidiType::NoteOff:
+        case NoteOff:
             return "Note Off";
-        case SQMixMitm::Event::MidiType::NoteOn:
+        case NoteOn:
             return "Note On";
-        case SQMixMitm::Event::MidiType::ControlChange:
+        case ControlChange:
             return "CC";
-        case SQMixMitm::Event::MidiType::ProgramChange:
+        case ProgramChange:
             return "PC";
         default:
             return "(midi type not in this LUT)";
@@ -67,17 +74,17 @@ static const char * miditype_name(uint8_t type){
 
 static const char * midimmc_name(uint8_t cmd){
     switch(cmd){
-        case SQMixMitm::Event::MidiMmcType::Stop:
+        case Stop:
             return "Stop";
-        case SQMixMitm::Event::MidiMmcType::Play:
+        case Play:
             return "Play";
-        case SQMixMitm::Event::MidiMmcType::FastForward:
+        case FastForward:
             return "Fast Forward";
-        case SQMixMitm::Event::MidiMmcType::Rewind:
+        case Rewind:
             return "Rewind";
-        case SQMixMitm::Event::MidiMmcType::Record:
+        case Record:
             return "Record";
-        case SQMixMitm::Event::MidiMmcType::Pause:
+        case Pause:
             return "Pause";
         default:
             return "(midi mmc command not in this LUT)";
@@ -132,7 +139,7 @@ int main(int argc, char * argv[]) {
 
     int opt;
 
-    while ((opt = getopt(argc, argv, "?hse")) != -1) {
+    while ((opt = getopt(argc, argv, "?hsve")) != -1) {
         switch (opt) {
             case 's':
                 opts.midisend = true;
@@ -152,16 +159,10 @@ int main(int argc, char * argv[]) {
                 else if (strcmp(optarg, "channelselect") == 0){
                     opts.listenForEvents.push_back(SQMixMitm::Event::Types::ChannelSelect);
                 }
-                else if (strcmp(optarg, "midifaderlevel") == 0){
+                else if (strcmp(optarg, "midifader") == 0){
                     opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiFaderLevel);
-                }
-                else if (strcmp(optarg, "midifaderselect") == 0){
                     opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiFaderSelect);
-                }
-                else if (strcmp(optarg, "midifadermute") == 0){
                     opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiFaderMute);
-                }
-                else if (strcmp(optarg, "midifaderpafl") == 0){
                     opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiFaderPAFL);
                 }
                 else if (strcmp(optarg, "midisoftkey") == 0){
@@ -180,9 +181,22 @@ int main(int argc, char * argv[]) {
                 }
                 break;
 
+            case 'v':
+                if (optarg){
+                    SQMixMitm::setLogLevel((SQMixMitm::LogLevel)atoi(optarg));
+                } else {
+
+                }
+
+                break;
+
             case '?':
             case 'h':
+                help();
+                return EXIT_SUCCESS;
+
             default: /* '?' */
+                printf("Unknown option: %c\n", opt);
                 help();
                 return EXIT_FAILURE;
         }

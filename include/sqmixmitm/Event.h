@@ -103,8 +103,7 @@ namespace SQMixMitm {
 
         inline unsigned char LayerSelect_layer(){ return data0(); }
 
-        // interestingly enough, once the value is above 127, the channel increases by one...
-        inline unsigned char MidiFaderLevel_channel(){ return data0() + (data2() > 127); }
+        inline unsigned char MidiFaderLevel_channel(){ return data0(); }
         inline unsigned char MidiFaderLevel_value(){ return data2(); }
 
         inline unsigned char MidiFaderMute_channel(){ return data0(); }

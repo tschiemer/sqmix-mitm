@@ -232,37 +232,44 @@ int main(int argc, char * argv[]) {
 
             if (opts.midisend){
 
-                midifader_send_thread = new std::thread([&mixMitm](){
+                if (!mixMitm.commandFactory().isValid()){
+                    printf("NOT sending midi, assuming command might be invalid and might crash mixer\n");
+                } else {
 
-                    printf("Starting MIDI Fader 1+2 fade up\n" );
+                    midifader_send_thread = new std::thread([&mixMitm](){
 
-                    for(uint16_t i = 0; i <= 255; i += 10){
-                        // sanity check
-                        if (mixMitm.connectionState() == SQMixMitm::MixMitm::ConnectionState::Disconnected){
-                            break;
+
+
+                        printf("Starting MIDI Fader 1+2 fade up\n" );
+
+                        for(uint16_t i = 0; i <= 255; i += 10){
+                            // sanity check
+                            if (mixMitm.connectionState() == SQMixMitm::MixMitm::ConnectionState::Disconnected){
+                                break;
+                            }
+
+                            mixMitm.sendCommand(
+                                    mixMitm.commandFactory().midiFaderLevel(0,i)
+                            );
+                            mixMitm.sendCommand(
+                                    mixMitm.commandFactory().midiFaderLevel(1,i)
+                            );
+
+                            std::this_thread::sleep_for(std::chrono::milliseconds(500));
                         }
 
-                        mixMitm.sendCommand(
-                                mixMitm.commandFactory().midiFaderLevel(0,i)
-                        );
-                        mixMitm.sendCommand(
-                                mixMitm.commandFactory().midiFaderLevel(1,i)
-                        );
+                        if (mixMitm.connectionState() == SQMixMitm::MixMitm::ConnectionState::Connected){
+                            mixMitm.sendCommand(
+                                    mixMitm.commandFactory().midiFaderLevel(0,0)
+                            );
+                            mixMitm.sendCommand(
+                                    mixMitm.commandFactory().midiFaderLevel(1,0)
+                            );
+                        }
 
-                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                    }
-
-                    if (mixMitm.connectionState() == SQMixMitm::MixMitm::ConnectionState::Connected){
-                        mixMitm.sendCommand(
-                                mixMitm.commandFactory().midiFaderLevel(0,0)
-                        );
-                        mixMitm.sendCommand(
-                                mixMitm.commandFactory().midiFaderLevel(1,0)
-                        );
-                    }
-
-                    printf("Finished MIDI Fader 1+2 fade up\n" );
-                });
+                        printf("Finished MIDI Fader 1+2 fade up\n" );
+                    });
+                }
             }
         }
         else if (state == SQMixMitm::MixMitm::Disconnected) {

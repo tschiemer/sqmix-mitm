@@ -73,7 +73,7 @@ namespace SQMixMitm {
             EventHeaderTableRef eventHeaderTable_ = nullptr;
 
         public:
-            Parser & usingVersion(Version &version);
+            void usingVersion(Version &version);
             int parse(unsigned char bytes[], int len, Event &event);
         };
 
@@ -81,17 +81,16 @@ namespace SQMixMitm {
     protected:
 
         Type type_;
-        unsigned char data_[4];
+        unsigned char data_[4] = {0,0,0,0};
 
     public:
 
-//        Event(Version & version);
-
-//        Event(unsigned char bytes[]);
-
+        Event(){}
+        Event(Event &event);
 
         inline Type type(){ return type_; }
         inline unsigned char * data(){ return data_; }
+        int size(){ return sizeof(data_); }
 
 
         inline unsigned char data0(){ return data_[0];}

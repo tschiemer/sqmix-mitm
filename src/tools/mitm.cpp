@@ -243,10 +243,10 @@ int main(int argc, char * argv[]) {
                         }
 
                         mixMitm.sendCommand(
-                                SQMixMitm::Command::midiFaderLevel(0,i)
+                                mixMitm.commandFactory().midiFaderLevel(0,i)
                         );
                         mixMitm.sendCommand(
-                                SQMixMitm::Command::midiFaderLevel(1,i)
+                                mixMitm.commandFactory().midiFaderLevel(1,i)
                         );
 
                         std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -254,10 +254,10 @@ int main(int argc, char * argv[]) {
 
                     if (mixMitm.connectionState() == SQMixMitm::MixMitm::ConnectionState::Connected){
                         mixMitm.sendCommand(
-                                SQMixMitm::Command::midiFaderLevel(0,0)
+                                mixMitm.commandFactory().midiFaderLevel(0,0)
                         );
                         mixMitm.sendCommand(
-                                SQMixMitm::Command::midiFaderLevel(1,0)
+                                mixMitm.commandFactory().midiFaderLevel(1,0)
                         );
                     }
 

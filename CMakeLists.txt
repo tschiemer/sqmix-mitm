@@ -21,7 +21,9 @@ add_library(sqmixmitm
         src/Command.cpp
         include/sqmixmitm/Command.h
         src/log.cpp
-        include/sqmixmitm/log.h src/Version.cpp include/sqmixmitm/Version.h)
+        include/sqmixmitm/log.h
+        src/Version.cpp
+        include/sqmixmitm/Version.h)
 target_include_directories(sqmixmitm PUBLIC include)
 target_include_directories(sqmixmitm PRIVATE include/sqmixmitm)
 

@@ -19,74 +19,76 @@
 #ifndef SQMIX_MITM_COMMAND_H
 #define SQMIX_MITM_COMMAND_H
 
-#include <bit>
-#include <cstdint>
-#include <cstring>
-#include <cstdio>
-#include <cassert>
+
+#include "Version.h"
 
 namespace SQMixMitm {
 
     class Command {
 
-        friend class MixMitm;
-
     public:
 
-        enum Types {
-            MidiFaderLevel      = 0xf71f1f0d
+        enum Type {
+            MidiFaderLevel = 0,
+
+            _COUNT_,
+            _INVALID_ = _COUNT_
+        };
+
+        class Factory {
+
+            friend class Command;
+
+        protected:
+
+            typedef const unsigned char CommandHeader[4];
+            typedef const CommandHeader CommandHeaderTable[_COUNT_];
+            typedef CommandHeaderTable * CommandHeaderTableRef;
+            typedef unsigned char CommandData[4];
+
+            static constexpr CommandHeaderTable kCommandHeaderTable_v1_5_10 = {
+                    {0xf7, 0x1f, 0x1f, 0x0d} // MidiFaderLevel
+            };
+
+        protected:
+
+            CommandHeaderTableRef commandHeaderTable_ = nullptr;
+
+            inline CommandHeader & headerForType(Type type){
+                return (*commandHeaderTable_)[type];
+            }
+
+        public:
+
+            void usingVersion(Version &version);
+
+            inline bool isValid(){ return commandHeaderTable_ != nullptr; }
+
+            Command midiFaderLevel(unsigned char channel, unsigned char level);
+
         };
 
     protected:
 
-        unsigned char bytes[8] = {0,0,0,0,0,0,0,0};
+        Type type_ = _INVALID_;
+        unsigned char bytes_[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
+    protected:
 
-        Command(Types type){
-#if defined(LITTLE_ENDIAN)
-            bytes[3] = type & 0xff;
-            bytes[2] = (type >> 8) & 0xff;
-            bytes[1] = (type >> 16) & 0xff;
-            bytes[0] = (type >> 24) & 0xff;
-#elif defined(BIG_ENDIAN)
-            bytes[0] = type & 0xff;
-            bytes[1] = (type >> 8) & 0xff;
-            bytes[2] = (type >> 16) & 0xff;
-            bytes[3] = (type >> 24) & 0xff;
-#endif
-//            printf("%02x%02x%02x%02x\n", bytes[0], bytes[1], bytes[2], bytes[3]);
-        }
-
+        Command(){};
+        Command(Type type, Factory::CommandHeader &header, Factory::CommandData &data);
+//        Command(Type type, Factory::CommandHeader &header, unsigned char data[]);
 
     public:
 
-        Command(Command &cmd){
-//            memcpy(bytes, cmd.bytes, sizeof(bytes));
-            *(uint64_t*)bytes = *(uint64_t*)cmd.bytes;
-        }
+        Command(Command &cmd);
 
-        static Command midiFaderLevel(uint8_t channel, uint8_t level){
-            assert(0 <= channel && channel <= 31);
+        Type type(){ return type_; }
 
-            Command cmd(MidiFaderLevel);
+        unsigned char * bytes(){ return bytes_; }
+        int size(){ return sizeof(bytes_); }
 
-            cmd.bytes[4] = channel;
-            cmd.bytes[6] = level;
-
-//            printf("%02x%02x%02x%02x %02x%02x%02x%02x\n", cmd.bytes[0], cmd.bytes[1], cmd.bytes[2], cmd.bytes[3], cmd.bytes[4], cmd.bytes[5], cmd.bytes[6], cmd.bytes[7]);
-
-            return cmd;
-        }
-
-        uint32_t type(){
-#if defined(LITTLE_ENDIAN)
-            return (bytes[0] << 24) + (bytes[1] << 16) +(bytes[2] << 8) + bytes[3];
-#elif defined(BIG_ENDIAN)
-            return *((uint32_t*)bytes);
-#endif
-        }
-
-
+        bool isValid(){ return type_ != _INVALID_; }
     };
 
 } // SQMixMitm

@@ -116,6 +116,8 @@ namespace SQMixMitm {
         Event::Parser eventParser_;
         std::map<Event::Type, EventCallback> eventCallbacks_;
 
+        Command::Factory commandFactory_;
+
     public:
 
 
@@ -161,6 +163,7 @@ namespace SQMixMitm {
 
         void onEvent(Event::Type type, EventCallback callback);
 
+        Command::Factory &commandFactory() { return commandFactory_; }
         void sendCommand(Command command);
 
         int start(std::string &mixerIp);

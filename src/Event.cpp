@@ -28,7 +28,7 @@
 
 namespace SQMixMitm {
 
-    Event::Parser & Event::Parser::usingVersion(Version & version){
+    void Event::Parser::usingVersion(Version & version){
 
         static Version v1_5_10(1,5,10,0);
 
@@ -41,8 +41,6 @@ namespace SQMixMitm {
 
             log(LogLevelInfo, "EventParser: unknown version, falling back to %d.%d.%d, might work unreliably", version.major(), version.minor(), version.patch());
         }
-
-        return *this;
     }
 
     int Event::Parser::parse(unsigned char bytes[], int len, Event &event){
@@ -63,6 +61,11 @@ namespace SQMixMitm {
         }
 
         return 0;
+    }
+
+    Event::Event(Event &event){
+        type_ = event.type_;
+        memcpy(data_, event.data_, sizeof(data_));
     }
 
 } // SQMixMitm

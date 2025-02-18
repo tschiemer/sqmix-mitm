@@ -18,5 +18,57 @@
 
 #include "Command.h"
 
+#include <cstring>
+#include <cstdio>
+#include <cassert>
+
+#include "log.h"
+
 namespace SQMixMitm {
+
+
+    void Command::Factory::usingVersion(Version &version) {
+
+        static Version v1_5_10(1,5,10,0);
+
+        if (version == v1_5_10){
+            commandHeaderTable_ = (CommandHeaderTableRef)kCommandHeaderTable_v1_5_10;
+        }
+
+        if (commandHeaderTable_ == nullptr){
+            log(LogLevelInfo, "Command::Factory: unknown version, will NOT send command", version.major(), version.minor(), version.patch());
+        }
+    }
+
+
+    Command Command::Factory::midiFaderLevel(unsigned char channel, unsigned char level){
+
+        if (!isValid()){
+            return Command();
+        }
+        if (0 <= channel && channel <= 31){
+            return Command();
+        }
+
+        CommandData data = {channel, 0, level, 0};
+
+        Command cmd(MidiFaderLevel, headerForType(MidiFaderLevel), data);
+
+//            printf("%02x%02x%02x%02x %02x%02x%02x%02x\n", cmd.bytes_[0], cmd.bytes_[1], cmd.bytes_[2], cmd.bytes_[3], cmd.bytes_[4], cmd.bytes_[5], cmd.bytes_[6], cmd.bytes_[7]);
+
+        return cmd;
+    }
+
+
+    Command::Command(Type type, Factory::CommandHeader &header, Factory::CommandData &data){
+        type_ = type;
+        memcpy(bytes_, header, sizeof(Factory::CommandHeader));
+        memcpy(bytes_ + sizeof(Factory::CommandHeader), data, sizeof(Factory::CommandData));
+    }
+
+    Command::Command(Command &cmd) {
+        type_ = cmd.type_;
+        memcpy(bytes_, cmd.bytes_, sizeof(bytes_));
+    }
+
 } // SQMixMitm

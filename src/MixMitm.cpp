@@ -514,6 +514,7 @@ namespace SQMixMitm {
                     version_.fromBytes(buffer + sizeof(MsgVersionResponseHdr));
 
                     eventParser_.usingVersion(version_);
+                    commandFactory_.usingVersion(version_);
                 }
                 setInternalState(Ready);
             }
@@ -808,14 +809,17 @@ namespace SQMixMitm {
         if (internalState_ != Ready || state_ != Running){
             return;
         }
+        if (!command.isValid()){
+            return;
+        }
 
 //        printf("Sending: ");
-//        for(int i = 0; i < sizeof(command.bytes); i++){
-//            printf("%02x", command.bytes[i]);
+//        for(int i = 0; i < command.size(); i++){
+//            printf("%02x", command.bytes()[i]);
 //        }
 //        printf("\n");
 
-        if (write(mixer_.tcp.sockfd, command.bytes, sizeof(command.bytes)) < 0){
+        if (write(mixer_.tcp.sockfd, command.bytes(), command.size()) < 0){
             perror("Failed to send command");
         }
     }

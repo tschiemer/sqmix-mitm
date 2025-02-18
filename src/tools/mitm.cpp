@@ -92,22 +92,22 @@ static const char * midimmc_name(uint8_t cmd){
 }
 
 void onEventCallback(SQMixMitm::Event &event){
-    if (event.type == SQMixMitm::Event::Types::ChannelSelect){
+    if (event.type() == SQMixMitm::Event::Type::ChannelSelect){
         printf("EVENT channel select %d\n", event.ChannelSelect_channel());
     }
-    else if (event.type == SQMixMitm::Event::Types::MidiFaderLevel){
+    else if (event.type() == SQMixMitm::Event::Type::MidiFaderLevel){
         printf("EVENT midifader level channel %d value %d\n", event.MidiFaderLevel_channel(), event.MidiFaderLevel_value());
     }
-    else if (event.type == SQMixMitm::Event::Types::MidiFaderSelect){
+    else if (event.type() == SQMixMitm::Event::Type::MidiFaderSelect){
         printf("EVENT midifader select channel %d\n", event.MidiFaderSelect_channel());
     }
-    else if (event.type == SQMixMitm::Event::Types::MidiFaderMute){
+    else if (event.type() == SQMixMitm::Event::Type::MidiFaderMute){
         printf("EVENT midifader mute channel %d\n", event.MidiFaderMute_channel());
     }
-    else if (event.type == SQMixMitm::Event::Types::MidiFaderPAFL){
+    else if (event.type() == SQMixMitm::Event::Type::MidiFaderPAFL){
         printf("EVENT midifader pafl channel %d\n", event.MidiFaderPAFL_channel());
     }
-    else if (event.type == SQMixMitm::Event::Types::MidiSoftKey){
+    else if (event.type() == SQMixMitm::Event::Type::MidiSoftKey){
         printf("EVENT soft key type %s (%02x) channel %d value1 %d value2 %d\n",
                miditype_name(event.MidiSoftKey_type()),
                event.MidiSoftRotary_type(),
@@ -115,7 +115,7 @@ void onEventCallback(SQMixMitm::Event &event){
                event.MidiSoftKey_value1(),
                event.MidiSoftKey_value2());
     }
-    else if (event.type == SQMixMitm::Event::Types::MidiSoftRotary){
+    else if (event.type() == SQMixMitm::Event::Type::MidiSoftRotary){
         printf("EVENT soft rotary type %s (%02x) channel %d value1 %d value2 %d\n",
                miditype_name(event.MidiSoftRotary_type()),
                event.MidiSoftRotary_type(),
@@ -123,7 +123,7 @@ void onEventCallback(SQMixMitm::Event &event){
                event.MidiSoftRotary_value1(),
                event.MidiSoftRotary_value2());
     }
-    else if (event.type == SQMixMitm::Event::Types::MidiMmc){
+    else if (event.type() == SQMixMitm::Event::Type::MidiMmc){
         printf("EVENT Midi MMC command %s (%hhu)\n",
                midimmc_name(event.MidiMmc_cmd()),
                event.MidiMmc_cmd());
@@ -147,32 +147,32 @@ int main(int argc, char * argv[]) {
             case 'e':
                 if (optarg == 0){
 
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::ChannelSelect);
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiFaderLevel);
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiFaderSelect);
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiFaderMute);
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiFaderPAFL);
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiSoftKey);
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiMmc);
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiSoftRotary);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::ChannelSelect);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::MidiFaderLevel);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::MidiFaderSelect);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::MidiFaderMute);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::MidiFaderPAFL);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::MidiSoftKey);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::MidiMmc);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::MidiSoftRotary);
                 }
                 else if (strcmp(optarg, "channelselect") == 0){
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::ChannelSelect);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::ChannelSelect);
                 }
                 else if (strcmp(optarg, "midifader") == 0){
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiFaderLevel);
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiFaderSelect);
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiFaderMute);
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiFaderPAFL);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::MidiFaderLevel);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::MidiFaderSelect);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::MidiFaderMute);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::MidiFaderPAFL);
                 }
                 else if (strcmp(optarg, "midisoftkey") == 0){
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiSoftKey);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::MidiSoftKey);
                 }
                 else if (strcmp(optarg, "midisoftrotary") == 0){
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiSoftRotary);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::MidiSoftRotary);
                 }
                 else if (strcmp(optarg, "midimmc") == 0){
-                    opts.listenForEvents.push_back(SQMixMitm::Event::Types::MidiMmc);
+                    opts.listenForEvents.push_back(SQMixMitm::Event::Type::MidiMmc);
                 }
                 else {
                     printf("ERROR: unknown event: %s\n", optarg);
@@ -223,7 +223,7 @@ int main(int argc, char * argv[]) {
         }
     });
 
-    mixMitm.onConnectionStateChanged([&mixMitm, &opt](SQMixMitm::MixMitm::ConnectionState state, SQMixMitm::MixMitm::Version version){
+    mixMitm.onConnectionStateChanged([&mixMitm, &opt](SQMixMitm::MixMitm::ConnectionState state, SQMixMitm::Version version){
         if (state == SQMixMitm::MixMitm::Connected) {
             printf(
                     "CONNECTION STATE connected (mixer firmware %d.%d.%d r%d)\n"

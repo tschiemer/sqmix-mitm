@@ -19,9 +19,9 @@
 #ifndef SQMIX_MITM_EVENT_H
 #define SQMIX_MITM_EVENT_H
 
-#include <bit>
-#include <cstdint>
-//#include <cstdio>
+
+//#include "firmware.h"
+#include "Version.h"
 
 namespace SQMixMitm {
 
@@ -29,98 +29,101 @@ namespace SQMixMitm {
 
     public:
 
-        typedef uint32_t Type;
-        typedef uint32_t Data;
+        enum Type {
+            ChannelSelect       = 0,
+            LayerSelect         = 1,
+
+            MidiFaderLevel      = 2,
+            MidiFaderSelect     = 3,
+            MidiFaderMute       = 4,
+            MidiFaderPAFL       = 5,
+
+            MidiSoftKey         = 6,
+            MidiSoftRotary      = 7,
+
+            MidiMmc             = 8,
+
+            _COUNT_
+        };
+
+
+        class Parser {
+        protected:
+
+            typedef const unsigned char EventHeader[4];
+            typedef const EventHeader EventHeaderTable[_COUNT_];
+
+            typedef EventHeaderTable * EventHeaderTableRef;
+
+            static constexpr EventHeaderTable kEventHeaderTable_v1_5_10 = {
+                    {0xf7, 0x33, 0x33, 0x09}, // channel select
+                    {0xf7, 0x08, 0x09, 0x0b}, // layer select
+                    {0xf7, 0x09, 0x1f, 0x0d}, // midifader level
+                    {0xf7, 0x08, 0x1f, 0x11}, // midifader select
+                    {0xf7, 0x08, 0x1f, 0x12}, // midifader mute
+                    {0xf7, 0x08, 0x1f, 0x13}, // midifader pafl
+                    {0xf7, 0x00, 0x1f, 0x14}, // midi soft key
+                    {0xf7, 0x21, 0x1f, 0x14}, // midi soft rotary
+                    {0xf7, 0x20, 0x1f, 0x0b}, // midi mmc
+            };
+
+            static constexpr EventHeaderTableRef kEventHeaderTableFallback = &kEventHeaderTable_v1_5_10;
+
+        protected:
+            EventHeaderTableRef eventHeaderTable_ = nullptr;
+
+        public:
+            Parser & usingVersion(Version &version);
+            int parse(unsigned char bytes[], int len, Event &event);
+        };
+
+
+    protected:
+
+        Type type_;
+        unsigned char data_[4];
 
     public:
 
-        Type type;
-        Data data;
+//        Event(Version & version);
 
-        enum Types {
-            LayerSelect         = 0xf708090b,
-            MidiFaderLevel      = 0xf7091f0d,
-            MidiFaderSelect     = 0xf7081f11,
-            MidiFaderMute       = 0xf7081f12,
-            MidiFaderPAFL       = 0xf7081f13,
-            MidiSoftKey         = 0xf7001f14,
-            MidiMmc             = 0xf7201f0b,
-            MidiSoftRotary      = 0xf7211f14,
-            ChannelSelect       = 0xf7333309
-
-        };
-
-        inline static bool isValidType(char bytes[]){
-#if defined(LITTLE_ENDIAN)
-            uint32_t type = (bytes[0] << 24) + (bytes[1] << 16) +(bytes[2] << 8) + bytes[3];
-#elif defined(BIG_ENDIAN)
-            uint32_t type = *((uint32_t*)bytes);
-#endif
-            return (
-                type == LayerSelect ||
-                type == MidiFaderLevel ||
-                type == MidiFaderSelect ||
-                type == MidiFaderMute ||
-                type == MidiFaderPAFL ||
-                type == MidiSoftKey ||
-                type == MidiMmc ||
-                type == MidiSoftRotary ||
-                type == ChannelSelect
-            );
-        }
-
-        Event(){}
-
-        Event(char * bytes){
-//            printf("e %02x%02x%02x%02x %02x%02x%02x%02x\n", (uint8_t)bytes[0], (uint8_t)bytes[1], (uint8_t)bytes[2], (uint8_t)bytes[3], (uint8_t)bytes[4], (uint8_t)bytes[5], (uint8_t)bytes[6], (uint8_t)bytes[7]);
-#if defined(LITTLE_ENDIAN)
-            type = (bytes[0] << 24) + (bytes[1] << 16) +(bytes[2] << 8) + bytes[3];
-            data = (bytes[4] << 24) + (bytes[5] << 16) +(bytes[6] << 8) + bytes[7];
-#elif defined(BIG_ENDIAN)
-            type = *((uint32_t*)bytes);
-            data = *((uint32_t*)(bytes+4));
-#endif
-//            printf("%08x %08x \n" , type, data);
-        }
+//        Event(unsigned char bytes[]);
 
 
-        inline uint8_t databyte0(){
-            return (data >> 24) & 0xff;
-        }
-        inline uint8_t databyte1(){
-            return (data >> 16) & 0xff;
-        }
-        inline uint8_t databyte2(){
-            return (data >> 8) & 0xff;
-        }
-        inline uint8_t databyte3(){
-            return data & 0xff;
-        }
+        inline Type type(){ return type_; }
+        inline unsigned char * data(){ return data_; }
 
+
+        inline unsigned char data0(){ return data_[0];}
+        inline unsigned char data1(){return data_[1];}
+        inline unsigned char data2(){return data_[2];}
+        inline unsigned char data3(){return data_[3];}
+
+
+        inline unsigned char ChannelSelect_channel(){ return data1(); }
+
+        inline unsigned char LayerSelect_layer(){ return data0(); }
 
         // interestingly enough, once the value is above 127, the channel increases by one...
-        inline uint8_t MidiFaderLevel_channel(){ return databyte0() + (databyte2() > 127); }
-        inline uint8_t MidiFaderLevel_value(){ return databyte2(); }
+        inline unsigned char MidiFaderLevel_channel(){ return data0() + (data2() > 127); }
+        inline unsigned char MidiFaderLevel_value(){ return data2(); }
 
-        inline uint8_t MidiFaderMute_channel(){ return databyte0(); }
-        inline uint8_t MidiFaderSelect_channel(){ return databyte0(); }
-        inline uint8_t MidiFaderPAFL_channel(){ return databyte0(); }
+        inline unsigned char MidiFaderMute_channel(){ return data0(); }
+        inline unsigned char MidiFaderSelect_channel(){ return data0(); }
+        inline unsigned char MidiFaderPAFL_channel(){ return data0(); }
 
-        inline uint8_t MidiSoftKey_channel(){ return databyte0() & 0x0f; }
-        inline uint8_t MidiSoftKey_type(){ return databyte0() & 0xf0; }
-        inline uint8_t MidiSoftKey_value1(){ return databyte1(); }
-        inline uint8_t MidiSoftKey_value2(){ return databyte2(); }
+        inline unsigned char MidiSoftKey_channel(){ return data0() & 0x0f; }
+        inline unsigned char MidiSoftKey_type(){ return data0() & 0xf0; }
+        inline unsigned char MidiSoftKey_value1(){ return data1(); }
+        inline unsigned char MidiSoftKey_value2(){ return data2(); }
 
-        inline uint8_t MidiMmc_cmd(){ return databyte0(); }
+        inline unsigned char MidiMmc_cmd(){ return data0(); }
 
-        inline uint8_t MidiSoftRotary_channel(){ return databyte0() & 0x0f; }
-        inline uint8_t MidiSoftRotary_type(){ return databyte0() & 0xf0; }
-        inline uint8_t MidiSoftRotary_value1(){ return databyte1(); }
-        inline uint8_t MidiSoftRotary_value2(){ return databyte2(); }
+        inline unsigned char MidiSoftRotary_channel(){ return data0() & 0x0f; }
+        inline unsigned char MidiSoftRotary_type(){ return data0() & 0xf0; }
+        inline unsigned char MidiSoftRotary_value1(){ return data1(); }
+        inline unsigned char MidiSoftRotary_value2(){ return data2(); }
 
-        inline uint8_t LayerSelect_layer(){ return databyte0(); }
-
-        inline uint8_t ChannelSelect_channel(){ return databyte1(); }
     };
 
 } // SQMixMitm

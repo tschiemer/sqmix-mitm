@@ -18,6 +18,51 @@
 
 #include "Event.h"
 
+#include <cstdint>
+#include <cassert>
+#include <exception>
+#include <stdexcept>
+#include <cstring>
+
+#include "log.h"
 
 namespace SQMixMitm {
+
+    Event::Parser & Event::Parser::usingVersion(Version & version){
+
+        static Version v1_5_10(1,5,10,0);
+
+        if (version == v1_5_10){
+            eventHeaderTable_ = (EventHeaderTableRef)kEventHeaderTable_v1_5_10;
+        }
+
+        if (eventHeaderTable_ == nullptr){
+            eventHeaderTable_ = kEventHeaderTableFallback;
+
+            log(LogLevelInfo, "EventParser: unknown version, falling back to %d.%d.%d, might work unreliably", version.major(), version.minor(), version.patch());
+        }
+
+        return *this;
+    }
+
+    int Event::Parser::parse(unsigned char bytes[], int len, Event &event){
+
+        // basic sanity check
+        if (len < 8){
+            return 0;
+        }
+
+        for(int i = 0; i < Type::_COUNT_; i++){
+            if (memcmp((*eventHeaderTable_)[i], bytes, sizeof(EventHeader)) == 0){
+
+                event.type_ = (Type)i;
+                memcpy(event.data_, bytes+sizeof(EventHeader), sizeof(event.data_));
+
+                return 8;
+            }
+        }
+
+        return 0;
+    }
+
 } // SQMixMitm

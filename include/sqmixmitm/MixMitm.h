@@ -26,6 +26,7 @@
 #include <netinet/in.h>
 #include <sys/poll.h>
 
+#include "Version.h"
 #include "Event.h"
 #include "Command.h"
 
@@ -38,33 +39,6 @@ namespace SQMixMitm {
         enum State {Stopped, Starting, Running, Stopping};
 
         enum ConnectionState {Disconnected, Connected};
-
-        class Version {
-
-        public:
-
-            char bytes_[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
-
-            Version(){}
-
-            Version(Version &other);
-
-            Version(uint8_t major, uint8_t minor, uint8_t patch, uint16_t build);
-
-            void fromBytes(char bytes[]);
-            void clear();
-
-            inline uint8_t major(){ return bytes_[7]; }
-            inline uint8_t minor(){ return bytes_[8]; }
-            inline uint8_t patch(){ return bytes_[9]; }
-            inline uint16_t build(){ return (uint)bytes_[10] + (((uint)bytes_[11]) << 8); }
-
-            bool operator==(Version &other);
-            bool operator<(Version &other);
-            bool operator>(Version &other);
-            bool operator<=(Version &other);
-            bool operator>=(Version &other);
-        };
 
         typedef std::function<void(State)> StateChangedCallback;
 
@@ -134,10 +108,12 @@ namespace SQMixMitm {
     protected:
 
         Version version_;
+//        bool versionIsSupported_ = false; // in principle not needed, but saving computation
 
         StateChangedCallback stateChangedCallback_ = nullptr;
         ConnectionStateChangedCallback connectionStateChangedCallback_ = nullptr;
 
+        Event::Parser eventParser_;
         std::map<Event::Type, EventCallback> eventCallbacks_;
 
     public:

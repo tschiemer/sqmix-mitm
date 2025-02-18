@@ -35,7 +35,7 @@ int main(int argc, char * argv[]) {
     SQMixMitm::MidiControl midiControl;
 
     SQMixMitm::MidiControl::ReceivedDataCallback callback = [](char data[], unsigned int len){
-        printf("Received %u bytes ", len);
+        printf("Received %u data ", len);
         for(unsigned int i = 0; i < len; i++){
             printf("%02X", (unsigned char)data[i]);
         }

@@ -32,52 +32,6 @@
 
 namespace SQMixMitm {
 
-    MixMitm::Version::Version(Version &other){
-        memcpy(bytes_, other.bytes_, sizeof(bytes_));
-    }
-
-    MixMitm::Version::Version(uint8_t major, uint8_t minor, uint8_t patch, uint16_t build){
-        bytes_[7] = major;
-        bytes_[8] = minor;
-        bytes_[9] = patch;
-        bytes_[10] = build & 0xff;
-        bytes_[11] = (build >> 8) & 0xff;
-    }
-
-    void MixMitm::Version::fromBytes(char bytes[]){
-        memcpy(bytes_, bytes, sizeof(bytes_));
-    }
-
-    void MixMitm::Version::clear(){
-        memset(bytes_, 0, sizeof(bytes_));
-    }
-
-    bool MixMitm::Version::operator==(Version &other){
-        return (major() == other.major() &&
-                minor() == other.minor() &&
-                (patch() == 0 || other.patch() == 0 || patch() == other.patch()));
-    }
-    bool MixMitm::Version::operator<(Version &other){
-        return (major() < other.major() ||
-                (major() == other.major() &&
-                 (minor() < other.minor() ||
-                  (minor() == other.minor() &&
-                   (patch() < other.patch())))));
-    }
-    bool MixMitm::Version::operator>(Version &other){
-        return (major() > other.major() ||
-                (major() == other.major() &&
-                 (minor() > other.minor() ||
-                  (minor() == other.minor() &&
-                   (patch() > other.patch())))));
-    }
-    bool MixMitm::Version::operator<=(Version &other){
-        return operator==(other) || operator<(other);
-    }
-    bool MixMitm::Version::operator>=(Version &other){
-        return operator==(other) || operator>(other);
-    }
-
     void MixMitm::setInternalState(InternalState state){
         internalState_ = state;
 
@@ -247,7 +201,7 @@ namespace SQMixMitm {
 //        printf("processTcpClient\n");
 
         int n;
-        char buffer[BUFSIZE_MTU];
+        unsigned char buffer[BUFSIZE_MTU];
 
         if ((n = read(client_.tcpSockfd, buffer, sizeof(buffer))) <= 0){
 
@@ -272,20 +226,12 @@ namespace SQMixMitm {
 
         if (internalState_ == Ready || internalState_ == ReadyAwaitingVersion) {
 
-            // pass along to app
+            // pass along to mixer
             if (write(mixer_.tcp.sockfd, buffer, n) < 0){
                 perror("failed forwarding to mixer.tcp");
                 return EXIT_FAILURE;
             }
 
-            if (internalState_ == Ready && n == 8){
-                Event event(buffer);
-
-                EventCallback callback = eventCallbacks_[event.type];
-                if (callback){
-                    callback(event);
-                }
-            }
         }
         else if (internalState_ == AwaitClientUdpPort){
 
@@ -530,7 +476,7 @@ namespace SQMixMitm {
     int MixMitm::processMixerTcp(){
 
         int n;
-        char buffer[BUFSIZE_MTU];
+        unsigned char buffer[BUFSIZE_MTU];
 
         if ((n = read(mixer_.tcp.sockfd, buffer, sizeof(buffer))) <= 0){
 
@@ -567,46 +513,53 @@ namespace SQMixMitm {
 
                     version_.fromBytes(buffer + sizeof(MsgVersionResponseHdr));
 
+                    eventParser_.usingVersion(version_);
                 }
                 setInternalState(Ready);
             }
 
-            // well, this here is not proper handling of the incoming data stream, but it's working well enough
-            // the semantics of the protocol are a bit unclear, sometimes bytes 2-5 denote the length of the data
-            // and sometimes it seems they denote a sort of subtype.
-            for(unsigned int i = 0; i+7 < n;){
+            if (internalState_ == Ready){
 
-                // sanity check, if this fails then this is not the start of a message we should be looking at
-                if (MsgHeader != (unsigned char)buffer[i]){
-                    break;
-                }
+                Event event;
 
-                // first check if it is a type known to us
-                if (Event::isValidType(buffer)){
-                    // if so, process it further
-                    Event event(buffer + i);
-                    publishEvent(event);
+                // well, this here is not proper handling of the incoming data stream, but it's working well enough
+                // the semantics of the protocol are a bit unclear, sometimes bytes 2-5 denote the length of the data
+                // and sometimes it seems they denote a sort of subtype.
+                for(unsigned int i = 0, j; i+7 < n;){
 
-                    // for all we know, all these events are exactly 8 bytes long
-                    i += 8;
-                    continue;
-                }
+                    // sanity check, if this fails then this is not the start of a message we should be looking at
+                    if (MsgHeader != (unsigned char)buffer[i]){
+                        break;
+                    }
 
-                // messages with variable size typically have a 0x08 as second byte
-                // and data size is little-endian within the next four bytes
-                if (MsgVariableSizeType == (unsigned char)buffer[i+1]){
-                    i += 2;
-                    unsigned int j = buffer[i++];
-                    j += ((unsigned int)buffer[i++]) << 8;
-                    j += ((unsigned int)buffer[i++]) << 16;
-                    j += ((unsigned int)buffer[i++]) << 24;
+                    // can be successfully parsed?
+                    j = eventParser_.parse(buffer, n, event);
+                    if (j > 0){
+
+                        publishEvent(event);
+
+                        i += j;
+                        continue;
+                    }
+
+                    // messages with variable size typically have a 0x08 as second byte
+                    // and data size is little-endian within the next four (?, or rather two??) bytes
+                    if (MsgVariableSizeType == (unsigned char)buffer[i+1]){
+                        i += 2;
+
+                        j = buffer[i++];
+                        j += ((unsigned int)buffer[i++]) << 8;
+                        j += ((unsigned int)buffer[i++]) << 16;
+                        j += ((unsigned int)buffer[i++]) << 24;
+
 //                    printf("++ %d\n" , j);
-                    i += j;
-                    continue;
-                }
+                        i += j;
+                        continue;
+                    }
 
-                // this is just a guess as many messages are just 8 bytes long
-                i += 8;
+                    // this is just a guess as many messages are just 8 bytes long
+                    i += 8;
+                }
             }
 
         }
@@ -830,9 +783,8 @@ namespace SQMixMitm {
     }
 
     void MixMitm::publishEvent(Event &event){
-//        printf("Publishing? %08x %08x\n", event.type, event.data);
 
-        EventCallback callback = eventCallbacks_[event.type];
+        EventCallback callback = eventCallbacks_[event.type()];
 
         // sanity check
         if (callback != nullptr){
@@ -841,6 +793,7 @@ namespace SQMixMitm {
     }
 
     void MixMitm::onEvent(Event::Type type, EventCallback callback){
+        // if passed nullpointer, delete any previously stored callback
         if (callback == nullptr){
             if (eventCallbacks_.contains(type)){
                 eventCallbacks_.erase(type);

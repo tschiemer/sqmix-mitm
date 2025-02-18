@@ -28,16 +28,19 @@ Connects to mixer and receives MIDI data (well, actually the raw data stream) du
 
 ### mitm
 ```shell
-Usage: ./sq-mitm [-es] <ip-of-mixer>
+/sq-mitm [-e[<event>]]* [-s] <ip-of-mixer>
 Act as Man-in-the-Middle service for mixer with given IP
 Note: requires service to be discoverable (such as when using sq-discovery-responder)
 
 Options:
-	 -e   Show events
-	 -s   Slowly fade MIDI faders 1+2 up from 0% to 100%
+	 -v            Increase verbosity (max 2x)
+	 -e[<event>]   Show events, if no option specified shows all events (<event> in "channelselect", "midifader", "midisoftkey", "midisoftrotary", "midimmc")
+	 -s            Slowly fade MIDI faders 1+2 up from 0% to 100%
 
 Examples:
-./sq-mitm -e channelselect -e midisoftcontrol 192.168.1.100
+./sq-mitm -vv -e 192.168.1.100 # very verbose, shows all events
+./sq-mitm -e channelselect 192.168.1.100 # show only channel select events
+./sq-mitm -s 192.168.1.100 # send commands
 ```
 
 ## Protocol basics
@@ -86,7 +89,7 @@ General:
 
 Likely type-dependent?:
 
-    f7 <type> <subtype (2 byte)> <data (4 byte)> (total 8 bytes)
+    f7 <type> <subtype (2 byte)> <data (4 byte)> (total 8 data)
 
 
 

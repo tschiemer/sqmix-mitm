@@ -34,7 +34,6 @@ namespace SQMixMitm {
     }
 
     void setLogLevel(LogLevel level){
-        assert(isValidLogLevel(level));
         logLevel = level;
     }
 
@@ -42,7 +41,8 @@ namespace SQMixMitm {
         logFile = file;
     }
 
-    void setLogFunction(LogFunction &function){
+    void setLogFunction(LogFunction function){
+        assert(function != nullptr);
         log = function;
     }
 
@@ -78,20 +78,6 @@ namespace SQMixMitm {
         fprintf(logFile, "\n");
 
 //        fflush(logFile);
-    }
-
-    void error(const char * msg, ...){
-
-        fprintf(stderr, "ERROR ");
-
-        va_list args;
-        va_start(args, msg);
-        vfprintf(stderr, msg, args);
-        va_end(args);
-
-        fprintf(stderr, "\n");
-
-//        fflush(stderr);
     }
 
 } // SQMixMitm

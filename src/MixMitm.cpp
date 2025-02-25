@@ -52,7 +52,7 @@ namespace SQMixMitm {
 
         int flags = fcntl(sockfd, F_GETFL);
         if (flags < 0){
-            perror("fcntl F_GETFL failed");
+            logError("fcntl F_GETFL failed");
             return EXIT_FAILURE;
         }
 
@@ -64,7 +64,7 @@ namespace SQMixMitm {
 
         // Set the server socket to non-blocking mode
         if (fcntl(sockfd, F_SETFL, flags) < 0) {
-            perror("fcntl F_SETFL failed");
+            logError("fcntl F_SETFL failed");
             return EXIT_FAILURE;
         }
 
@@ -82,12 +82,12 @@ namespace SQMixMitm {
         timeout.tv_usec = (ms.count() % 1000) * 1000;
 
         if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0){
-            perror("setsockopt SO_RCVTIMEO failed" );
+            logError("setsockopt SO_RCVTIMEO failed" );
             return EXIT_FAILURE;
         }
 
         if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0){
-            perror("setsockopt SO_SNDTIMEO failed" );
+            logError("setsockopt SO_SNDTIMEO failed" );
             return EXIT_FAILURE;
         }
 
@@ -103,7 +103,7 @@ namespace SQMixMitm {
 
         // Creating socket file descriptor
         if ( (tcpServerSockfd_ = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
-            perror("tcp server socket creation failed");
+            logError("tcp server socket creation failed");
             return EXIT_FAILURE;
         }
 
@@ -127,13 +127,13 @@ namespace SQMixMitm {
 
         // Bind the socket with the server address
         if (bind(tcpServerSockfd_, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ){
-            perror("tcp server bind failed");
+            logError("tcp server bind failed");
             close(tcpServerSockfd_);
             return EXIT_FAILURE;
         }
 
         if (listen(tcpServerSockfd_,1) < 0){
-            perror("tcp server listen failed");
+            logError("tcp server listen failed");
             close(tcpServerSockfd_);
             return EXIT_FAILURE;
         }
@@ -171,7 +171,7 @@ namespace SQMixMitm {
 
         if ((sockfd = accept(tcpServerSockfd_, (struct sockaddr *)&addr, &slen)) < 0){
             if (errno != EAGAIN && errno != EWOULDBLOCK){
-                perror("tcp server accept error");
+                logError("tcp server accept error");
                 return EXIT_FAILURE;
             }
         } else { // accepted new tcp connection request
@@ -219,7 +219,7 @@ namespace SQMixMitm {
                 return EXIT_SUCCESS;
             }
             else {
-                perror("TCP client: Unknown socket error\n");
+                logError("TCP client: Unknown socket error\n");
                 return EXIT_FAILURE;
             }
         }
@@ -228,7 +228,7 @@ namespace SQMixMitm {
 
             // pass along to mixer
             if (write(mixer_.tcp.sockfd, buffer, n) < 0){
-                perror("failed forwarding to mixer.tcp");
+                logError("failed forwarding to mixer.tcp");
                 return EXIT_FAILURE;
             }
 
@@ -245,7 +245,7 @@ namespace SQMixMitm {
 
                 setInternalState(ConnectToMixer);
             } else {
-                perror("UDP client did not send used UDP port, hanging up");
+                logError("UDP client did not send used UDP port, hanging up");
 
                 disconnectTcpClient();
 
@@ -279,7 +279,7 @@ namespace SQMixMitm {
 
         // Creating socket file descriptor
         if ( (udpServerSockfd_ = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
-            perror("udp server socket creation failed");
+            logError("udp server socket creation failed");
             state_ = Stopped;
             return EXIT_FAILURE;
         }
@@ -306,7 +306,7 @@ namespace SQMixMitm {
 
         // Bind the socket with the server address
         if (bind(udpServerSockfd_, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ){
-            perror("udp server bind failed");
+            logError("udp server bind failed");
             state_ = Stopped;
             return EXIT_FAILURE;
         }
@@ -355,7 +355,7 @@ namespace SQMixMitm {
 //                    printf("no packets available\n" );
 //                    std::this_thread::sleep_for(std::chrono::seconds(1));
                 } else {
-                    perror("udp server processing: Unknown socket error during read\n");
+                    logError("udp server processing: Unknown socket error during read\n");
                 }
             }
             // only process if connection is all ready && packet coming from actual client
@@ -373,7 +373,7 @@ namespace SQMixMitm {
 
                 //
                 if (sendto(mixer_.udp.sockfd, buffer, n, 0, (const struct sockaddr *) &dstaddr, len) < 0){
-                    perror("UDP sendto mixer");
+                    logError("UDP sendto mixer");
                 }
 
 
@@ -393,7 +393,7 @@ namespace SQMixMitm {
 
         // Creating socket file descriptor
         if ( (mixer_.tcp.sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
-            perror("tcpToMixerSockfd_ socket creation failed");
+            logError("tcpToMixerSockfd_ socket creation failed");
             state_ = Stopped;
             return EXIT_FAILURE;
         }
@@ -408,15 +408,45 @@ namespace SQMixMitm {
         tcpservaddr.sin_port = htons(TCPControlPort); // TODO set correct port
         tcpservaddr.sin_addr.s_addr = mixer_.addr.s_addr;
 
+        log(LogLevelInfo, "Connecting to mixer..");
+
         if (::connect(mixer_.tcp.sockfd, (const struct sockaddr *)&tcpservaddr, sizeof(tcpservaddr)) < 0){
-            perror("tcp to mixer connect failed");
+            logError("tcp to mixer connect failed");
             return EXIT_FAILURE;
         }
+
+//        setSocketBlocking(mixer_.tcp.sockfd, false);
+//
+//        if (::connect(mixer_.tcp.sockfd, (const struct sockaddr *)&tcpservaddr, sizeof(tcpservaddr)) < 0){
+//            if (errno == EINPROGRESS){
+//
+//                nfds_t n = 0;
+//                struct pollfd fds[1];
+//
+//                fds[0].fd = mixer_.tcp.sockfd;
+//                fds[0].events = POLLIN | POLLOUT;
+//                fds[0].revents = POLLHUP | POLLERR;
+//
+//                int r = poll(fds, n, 3000);
+////                printf("poll r = %d\n", r);
+//                // timeout
+//                if (r == 0){
+//                    close()
+//                }
+//                else if (r < 0){
+//                    logError("polling error?!");
+//                    return EXIT_FAILURE;
+//                }
+//            } else {
+//                logError("tcp to mixer connect failed");
+//                return EXIT_FAILURE;
+//            }
+//        }
 
 
         // Creating socket file descriptor
         if ( (mixer_.udp.sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
-            perror("socket creation failed");
+            logError("connectToMixer() udp socket creation failed");
             return EXIT_FAILURE;
         }
 
@@ -437,7 +467,7 @@ namespace SQMixMitm {
         // Bind the socket with the server address
         if (bind(mixer_.udp.sockfd, (const struct sockaddr *)&udpservaddr, sizeof(udpservaddr)) < 0 ){
 
-            perror("udp to mixer bind failed");
+            logError("connectToMixer() udp bind failed");
 
             return EXIT_FAILURE;
         }
@@ -493,7 +523,7 @@ namespace SQMixMitm {
                 // do nothing
             }
             else {
-                perror("TCP mixer: Unknown socket error\n");
+                logError("TCP mixer: Unknown socket error\n");
                 //TODO ?
                 return EXIT_FAILURE;
             }
@@ -503,7 +533,7 @@ namespace SQMixMitm {
             // pass along to app
 
             if (write(client_.tcpSockfd, buffer, n) < 0){
-                perror("failed forwarding to mixer.tcp");
+                logError("failed forwarding to mixer.tcp");
                 return EXIT_FAILURE;
             }
 
@@ -578,7 +608,7 @@ namespace SQMixMitm {
 
                 // use this point in time to respond to client with own udp port msg
                 if (sendUdpPortTo(client_.tcpSockfd, UDPStreamingPort)){
-                    perror("failed to inform client of own UDP port");
+                    logError("failed to inform client of own UDP port");
 
                     return EXIT_FAILURE;
                 }
@@ -593,7 +623,7 @@ namespace SQMixMitm {
                 }
 
             } else {
-                perror("expected other first message from mixer");
+                logError("expected other first message from mixer");
                 return EXIT_FAILURE;
             }
         }
@@ -625,7 +655,7 @@ namespace SQMixMitm {
                 if (errno == EAGAIN){
                     // no packets available
                 } else {
-                    perror("udp server processing: Unknown socket error during read\n");
+                    logError("udp server processing: Unknown socket error during read\n");
                 }
             }
             // only process if ready && packet coming from mixer
@@ -643,7 +673,7 @@ namespace SQMixMitm {
 
                 //
                 if (sendto(udpServerSockfd_, buffer, n, 0, (const struct sockaddr *) &dstaddr, len) < 0){
-                    perror("UDP sendto app");
+                    logError("UDP sendto app");
                 }
 
 
@@ -669,7 +699,7 @@ namespace SQMixMitm {
         msg[7] = (p >> 8) & 0xff;
 
         if (write(sockfd,msg, sizeof(msg)) < 0){
-            perror("socket write error");
+            logError("socket write error");
             return EXIT_FAILURE;
         }
 
@@ -703,7 +733,7 @@ namespace SQMixMitm {
         }
 
         if (poll(fds, n, timeout_ms) < 0){
-            perror("polling error?!");
+            logError("polling error?!");
         }
     }
 
@@ -740,7 +770,7 @@ namespace SQMixMitm {
                 }
                 if (internalState_ == ConnectToMixer){
                     if (connectToMixer()){
-                        perror("failed connection to mixer");
+                        logError("failed connection to mixer");
 
                         disconnectTcpClient();
 
@@ -753,7 +783,7 @@ namespace SQMixMitm {
 
                     if (sendUdpPortTo(mixer_.tcp.sockfd, ntohs(mixer_.udp.localPort))){
                         //|| sendVersionRequestTo(mixer_.tcp.sockfd
-                        perror("Failed sending udp port o mixer");
+                        logError("Failed sending udp port o mixer");
 
                         disconnectFromMixer();
                         disconnectTcpClient();
@@ -820,7 +850,7 @@ namespace SQMixMitm {
 //        printf("\n");
 
         if (write(mixer_.tcp.sockfd, command.bytes(), command.size()) < 0){
-            perror("Failed to send command");
+            logError("Failed to send command");
         }
     }
 
@@ -828,7 +858,7 @@ namespace SQMixMitm {
 
         // parameter validation
         if (inet_aton(mixerIp.c_str(), &mixer_.addr) != 1){
-            perror("Invalid ip??");
+            logError("Invalid ip??");
             return EXIT_FAILURE;
         }
 

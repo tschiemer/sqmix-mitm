@@ -1,9 +1,9 @@
 # sqmix-mitm
-Man-in-the-Middle basis for SQ Mix control
+Man-in-the-Middle basis for SQMidi Mix control
 
-Please be aware that this library is intended to allow for integration of SQ mixing surfaces into other software solutions where the software provided is insufficient for actual integration.
+Please be aware that this library is intended to allow for integration of SQMidi mixing surfaces into other software solutions where the software provided is insufficient for actual integration.
 
-The `sq-mitm` utility is an example of how channel select, midi faders and midi soft controls can be integrated. Noticably, for actual use official client software (such as SQ MixPad) is required. This is not a standalone solution. 
+The `sq-mitm` utility is an example of how channel select, midi faders and midi soft controls can be integrated. Noticably, for actual use official client software (such as SQMidi MixPad) is required. This is not a standalone solution. 
 
 
 ## Utils
@@ -17,7 +17,7 @@ Just shows which mixers were found and for which there is a timeout (of 5 secs)
 ### discovery-responder
 ```shell
 Usage: ./sq-discovery-responder <name-of-pretend-mixer>
-Listen to any SQ Mixer inquiries and respond such that *this* host is assumed to be a mixer of the SQ series.
+Listen to any SQMidi Mixer inquiries and respond such that *this* host is assumed to be a mixer of the SQMidi series.
 ```
 
 ### midi-control
@@ -49,11 +49,11 @@ Examples:
 
 | Port  | Protocol | Purpose         | Details                                                                                                  |
 |-------|----------|-----------------|----------------------------------------------------------------------------------------------------------|
-| 51320 | UDP      | Discovery       | Request: Broadcast plaintext message "`SQ Find`"                                                         |
+| 51320 | UDP      | Discovery       | Request: Broadcast plaintext message "`SQMidi Find`"                                                         |
 |       |          |                 | Response: plaintext null-terminated name of mixer as set in mixer config (ex. default for SQ6 "`SQ6\0`") |
-| 51325 | TCP      | SQ MIDI Control | Raw MIDI data stream                                                                                     |
-| 51324 | UDP      | SQ Mix          | Can be used for keep-alives (maybe only used for this?)                                                  |
-| 51326 | TCP      | SQ Mix          | Control data port                                                                                        |
+| 51325 | TCP      | SQMidi MIDI Control | Raw MIDI data stream                                                                                     |
+| 51324 | UDP      | SQMidi Mix          | Can be used for keep-alives (maybe only used for this?)                                                  |
+| 51326 | TCP      | SQMidi Mix          | Control data port                                                                                        |
 
 ### Handshake
 

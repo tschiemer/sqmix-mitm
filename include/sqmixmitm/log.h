@@ -39,6 +39,8 @@ namespace SQMixMitm {
 
     void defaultLog(LogLevel level, const char * msg, ...);
 
+    void logError(const char * msg, ...);
+
     extern LogFunction log;
 
 } // SQMixMitm

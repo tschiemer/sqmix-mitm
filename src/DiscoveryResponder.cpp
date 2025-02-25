@@ -19,6 +19,7 @@
 */
 
 #include "DiscoveryResponder.h"
+#include "log.h"
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -35,7 +36,7 @@ namespace SQMixMitm {
 
         // Creating socket file descriptor
         if ( (sockfd_ = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
-            perror("socket creation failed");
+            logError("socket creation failed");
             state_ = Stopped;
             return EXIT_FAILURE;
         }
@@ -62,7 +63,7 @@ namespace SQMixMitm {
 
         // Bind the socket with the server address
         if (bind(sockfd_, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ){
-            perror("bind failed");
+            logError("bind failed");
             state_ = Stopped;
             return EXIT_FAILURE;
         }
@@ -90,7 +91,7 @@ namespace SQMixMitm {
                     if (errno == EAGAIN){
                         // do nothing
                     } else {
-                        perror("Unknown socket error, stopping\n");
+                        logError("Unknown socket error, stopping\n");
 
                         // stop loop and end thread
                         state_ = Stopping;
@@ -100,7 +101,7 @@ namespace SQMixMitm {
                     // basic sanity check if discovery request was sent
                     if (n == sizeof(DiscoveryMessage)-1 && memcmp(buffer, DiscoveryMessage, sizeof(DiscoveryMessage)-1) == 0){
                         if (sendto(sockfd_, (const char *)name_.data(), name_.length()+1, 0, (const struct sockaddr *) &cliaddr, len) < 0){
-                            perror("sendto");
+                            logError("sendto");
                         }
                     }
                 }

@@ -17,6 +17,7 @@
 */
 
 #include "MidiControl.h"
+#include "log.h"
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -34,7 +35,7 @@ namespace SQMixMitm {
 
         // Creating socket file descriptor
         if ( (sockfd_ = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
-            perror("socket creation failed");
+            logError("socket creation failed");
             state_ = Stopped;
             return EXIT_FAILURE;
         }
@@ -56,13 +57,13 @@ namespace SQMixMitm {
         servaddr.sin_port = htons(Port);
 
         if (inet_aton(mixerIp.c_str(), (struct in_addr*)&(servaddr.sin_addr.s_addr)) != 1){
-            perror("Invalid ip??");
+            logError("Invalid ip??");
             state_ = Stopped;
             return EXIT_FAILURE;
         }
 
         if (::connect(sockfd_, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0){
-            perror("connect failed");
+            logError("connect failed");
             state_ = Stopped;
             return EXIT_FAILURE;
         }
@@ -87,7 +88,7 @@ namespace SQMixMitm {
                     else if (errno == EAGAIN){
                         // do nothing
                     } else {
-                        perror("Unknown socket error, stopping\n");
+                        logError("Unknown socket error, stopping\n");
 
                         // stop loop and end thread
                         state_ = Stopping;

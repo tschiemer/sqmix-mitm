@@ -20,6 +20,8 @@
 
 #include <stdarg.h>
 #include <cassert>
+#include <cerrno>
+#include <cstring>
 
 namespace SQMixMitm {
 
@@ -77,7 +79,20 @@ namespace SQMixMitm {
         // NL
         fprintf(logFile, "\n");
 
-//        fflush(logFile);
+    }
+
+    void logError(const char * msg, ...) {
+
+        char buffer[512];
+
+        va_list args;
+        va_start(args, msg);
+
+        vsnprintf(buffer, sizeof(buffer), msg, args);
+
+        va_end(args);
+
+        log(LogLevelError,"%s: %s", buffer, strerror(errno));
     }
 
 } // SQMixMitm

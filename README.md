@@ -43,6 +43,24 @@ Examples:
 ./sq-mitm -s 192.168.1.100 # send commands
 ```
 
+### Events
+
+#### Channel Select
+
+| Console Channel | ID (as per event) |
+|-----------------|-------------------|
+| 1-40            | 0 - 39            |
+| ST1             | 40                |
+| ST2             | 42                |
+| ST3             | 44                |
+| USB             | 46                |
+| FX Ret 1-8      | 64-71             |
+| Group 1-12      | 72 - 83           |
+| Aux 1-12        | 88 - 99           |
+| MainLR          | 104               |
+| Matrix 1-3      | 115-117           |
+| FX Send 1-4     | 107-110           |
+
 ## Protocol basics
 
 ### Ports
@@ -74,6 +92,8 @@ Examples:
 The Client sends a keep-alive message every sec to the mixer through UDP with data `7f0500000000`.
 
 The Mixer sends an identical message every sec.
+
+
 
 
 ### Some documented messages

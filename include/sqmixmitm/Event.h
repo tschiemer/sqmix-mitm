@@ -55,18 +55,30 @@ namespace SQMixMitm {
 
             typedef EventHeaderTable * EventHeaderTableRef;
 
-            static constexpr EventHeaderTable kEventHeaderTable_v1_5_10 = {
+                static constexpr EventHeaderTable kEventHeaderTable_v1_5_10 = {
 //                    {0xf7, 0x33, 0x33, 0x09}, // channel select NOTE likely this is not the channel select but the show view something (identical for all FX sends)
-                    {0xf7, 0x08, 0x09, 0x09}, // channel select
-                    {0xf7, 0x08, 0x09, 0x0b}, // layer select
-                    {0xf7, 0x09, 0x1f, 0x0d}, // midifader level
-                    {0xf7, 0x08, 0x1f, 0x11}, // midifader select
-                    {0xf7, 0x08, 0x1f, 0x12}, // midifader mute
-                    {0xf7, 0x08, 0x1f, 0x13}, // midifader pafl
-                    {0xf7, 0x00, 0x1f, 0x14}, // midi soft key
-                    {0xf7, 0x21, 0x1f, 0x14}, // midi soft rotary
-                    {0xf7, 0x20, 0x1f, 0x0b}, // midi mmc
-            };
+                        {0xf7, 0x08, 0x09, 0x09}, // channel select
+                        {0xf7, 0x08, 0x09, 0x0b}, // layer select
+                        {0xf7, 0x09, 0x1f, 0x0d}, // midifader level
+                        {0xf7, 0x08, 0x1f, 0x11}, // midifader select
+                        {0xf7, 0x08, 0x1f, 0x12}, // midifader mute
+                        {0xf7, 0x08, 0x1f, 0x13}, // midifader pafl
+                        {0xf7, 0x00, 0x1f, 0x14}, // midi soft key
+                        {0xf7, 0x21, 0x1f, 0x14}, // midi soft rotary
+                        {0xf7, 0x20, 0x1f, 0x0b}, // midi mmc
+                };
+
+                static constexpr EventHeaderTable kEventHeaderTable_v1_6_0 = {
+                        {0xf7, 0x08, 0x09, 0x0c}, // channel select
+                        {0xf7, 0x08, 0x09, 0x0e}, // layer select
+                        {0xf7, 0x09, 0x1f, 0x10}, // midifader level
+                        {0xf7, 0x08, 0x1f, 0x14}, // midifader select
+                        {0xf7, 0x08, 0x1f, 0x15}, // midifader mute
+                        {0xf7, 0x08, 0x1f, 0x16}, // midifader pafl
+                        {0xf7, 0x20, 0x1f, 0x17}, // midi soft key
+                        {0xf7, 0x21, 0x1f, 0x17}, // midi soft rotary
+                        {0xf7, 0x20, 0x1f, 0x0e}, // midi mmc
+                };
 
             static constexpr EventHeaderTableRef kEventHeaderTableFallback = &kEventHeaderTable_v1_5_10;
 

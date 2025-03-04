@@ -31,9 +31,14 @@ namespace SQMixMitm {
     void Event::Parser::usingVersion(Version & version){
 
         static Version v1_5_10(1,5,10,0);
+        static Version v1_6_0(1,6,0,0);
 
         if (version == v1_5_10){
             eventHeaderTable_ = (EventHeaderTableRef)kEventHeaderTable_v1_5_10;
+        }
+
+        if (version == v1_6_0){
+            eventHeaderTable_ = (EventHeaderTableRef)kEventHeaderTable_v1_6_0;
         }
 
         if (eventHeaderTable_ == nullptr){

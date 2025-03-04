@@ -56,7 +56,8 @@ namespace SQMixMitm {
             typedef EventHeaderTable * EventHeaderTableRef;
 
             static constexpr EventHeaderTable kEventHeaderTable_v1_5_10 = {
-                    {0xf7, 0x33, 0x33, 0x09}, // channel select
+//                    {0xf7, 0x33, 0x33, 0x09}, // channel select NOTE likely this is not the channel select but the show view something (identical for all FX sends)
+                    {0xf7, 0x08, 0x09, 0x09}, // channel select
                     {0xf7, 0x08, 0x09, 0x0b}, // layer select
                     {0xf7, 0x09, 0x1f, 0x0d}, // midifader level
                     {0xf7, 0x08, 0x1f, 0x11}, // midifader select
@@ -99,7 +100,9 @@ namespace SQMixMitm {
         inline unsigned char data3(){return data_[3];}
 
 
-        inline unsigned char ChannelSelect_channel(){ return data1(); }
+        inline unsigned char ChannelSelect_physical_strip(){ return data0(); }
+        inline unsigned char ChannelSelect_channel(){ return data3(); }
+        inline unsigned char ChannelSelect_onoff(){ return data2(); }
 
         inline unsigned char LayerSelect_layer(){ return data0(); }
 

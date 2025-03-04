@@ -93,7 +93,7 @@ static const char * midimmc_name(uint8_t cmd){
 
 void onEventCallback(SQMixMitm::Event &event){
     if (event.type() == SQMixMitm::Event::Type::ChannelSelect){
-        printf("EVENT channel select %d\n", event.ChannelSelect_channel());
+        printf("EVENT channel select physical strip %d channel %d state %d\n", event.ChannelSelect_physical_strip(), event.ChannelSelect_channel(), event.ChannelSelect_onoff());
     }
     else if (event.type() == SQMixMitm::Event::Type::MidiFaderLevel){
         printf("EVENT midifader level channel %d value %d\n", event.MidiFaderLevel_channel(), event.MidiFaderLevel_value());
